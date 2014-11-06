@@ -135,6 +135,22 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		// REFRACTION
 		//TODO: when to refract
 		Vec3f incoming_direction = ray.getDirection();
+		double n = current_n_val / material->getRefractiveIndex();
+		double cosI = -1 * hit.getNormal().Dot3(incoming_direction);
+		double sinT2 = n * n * (1.0 - cosI * cosI);
+		if(sinT2 <= 1.0){
+			double cosT = sqrt(1.0 - sinT2);
+			Vec3f outgoing_direction = n * incoming_direction + (n * cosI - cosT) * hit.getNormal();
+			//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
+			//	to do this, check angle of the normal and the hit										
+			TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), material->getRefractiveIndex());
+		}
+		else{
+			//TODO: total internal refraction
+		}
+
+		//Old way
+		/*
 		incoming_direction.Negate(); //Negate such that the angle between them is proper
 		float incoming_angle = incoming_direction.AngleBetween(hit.getNormal());
 		float outgoing_angle = asin(sin(incoming_angle) * current_n_val / material->getRefractiveIndex());
@@ -144,7 +160,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		Vec3f find_c =  hit.getNormal();
 		find_c.Negate();
 		float c = find_c.Dot3(ray.getDirection());
-
+		
 		//Check for total internal refraction
 
 		float radical = 1 - ( pow(r,2) * (1 - pow(c,2) ) );
@@ -164,7 +180,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		else{
 			// TODO: do something if total internal refraction
 		}
-
+		*/
 		
 
 		//std::cout << "    number of segments: "  << visualization_line_segments.size() << std::endl;
