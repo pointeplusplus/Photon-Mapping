@@ -4,6 +4,7 @@
 #include <cassert>
 #include <string>
 #include <iostream>
+#include <stdio.h>
 
 // ====================================================================
 // 24 bit color
