@@ -107,6 +107,7 @@ Vec3f mixColors(std::vector<double> wavelengths){
 	double Z = (1 - x - y) / y * Y;
 	return XYZtoRGB(Vec3f(X, Y, Z));
 } 
+/*
 int main() {
 	Image full_spectrum, red, green, blue;
 	full_spectrum.Allocate(400,10);
@@ -162,3 +163,4 @@ int main() {
 	cie.Save("CIE.ppm");
 	cie2.Save("CIE2.ppm");
 }
+*/
