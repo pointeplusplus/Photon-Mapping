@@ -11,21 +11,42 @@ class Photon {
  public:
 
 	// CONSTRUCTOR
-	Photon(const Vec3f &p, const Vec3f &d, const Vec3f &e, int b) :
-		position(p),direction_from(d),energy(e),bounce(b) {}
+	Photon(const Vec3f &p, const Vec3f &d, const float &w, int b) :
+		position(p),direction_from(d),wavelength(w),bounce(b) {}
 
 	// ACCESSORS
 	const Vec3f& getPosition() const { return position; }
 	const Vec3f& getDirectionFrom() const { return direction_from; }
-	const Vec3f& getEnergy() const { return energy; }
+	//const Vec3f& getEnergy() const { return energy; }
 	int whichBounce() const { return bounce; }
+
+	const float getWavelength() const { return wavelength; }
+
+/* //I don't think that this function is needed because photons are not actually passed into TracePhoton
+	const float getCurrentNVal() const {
+
+		//if there is no current material, use refractive index of air
+		//TODO: update current refractive index to be air again when leaving a material (hit will still be of that material's type)
+		if (current_material == NULL){
+			return 1.000293;
+		}
+		else {
+			return current_material->getRefractiveIndex();
+		}
+	}
+*/
 
  private:
 	// REPRESENTATION
 	Vec3f position;
 	Vec3f direction_from;
-	Vec3f energy;
+	//Vec3f energy;
 	int bounce;
+
+	float wavelength;
+
+	//Material* current_material;
+
 };
 
 #endif
