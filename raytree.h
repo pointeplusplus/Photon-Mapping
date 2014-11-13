@@ -67,7 +67,7 @@ public:
 		if (!activated) return;
 		general_segments.push_back(Segment(ray,tstart,tstop));
 		general_segment_colors.push_back(color);
-		std::cout << "number of segments so far: " << general_segments.size() << std::endl;
+//		std::cout << "number of segments so far: " << general_segments.size() << std::endl;
 	}
 
 	static void initializeVBOs(); 

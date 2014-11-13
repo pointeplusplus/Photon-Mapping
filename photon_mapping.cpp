@@ -16,7 +16,9 @@
 #include "raytracer.h"
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
-#define DRAW_VISUALIZATION true
+//#define DRAW_VISUALIZATION false
+#define DRAW_PHOTON_PATHS false
+#define DRAW_COLORED_NORMALS true
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
@@ -35,6 +37,8 @@ PhotonMapping::~PhotonMapping() {
 
 void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction, 
 				const float wavelength, int iter, Vec4f viz_color, float current_n_val) {
+
+	//std::cout << "In trace photon" << std::endl;
 
 	//FOR DEBUG ONLY
 	if(viz_color[0] == 1.0 && viz_color[1] == 0.5 && viz_color[2] == 0.0){
@@ -71,12 +75,16 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	Hit hit;
 	//find the next thing or the photon to bounce off of
 	if(CastRay(ray, hit, false)){
-
+		std::cout << "    cast ray == true" << std::endl;
+		if(hit.getIsBackfacing()){
+			std:: cout << "    backfacing hit" << std::endl;
+		}
+		/*
 		//FOR DEBUG ONLY
 		if(viz_color[0] == 1.0 && viz_color[1] == 0.5 && viz_color[2] == 0.0){
 			std::cout << "Cast ray worked with refraction color.  Iter: " << iter << std::endl;	
 		}
-
+		*/
 		Material* material = hit.getMaterial();
 		Vec3f bounce_location = ray.getOrigin() + (hit.getT() * ray.getDirection());
 
@@ -89,11 +97,21 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		// checking kdtree determines whether or not this was called from pressing t.  If so, draw main segment also.
 		if(iter != 0 || !kdtree){
 			//visualization_line_segments.push_back(LineSegment(position, bounce_location, viz_color));	
-			RayTree::AddGeneralSegment(ray,0,hit.getT(), viz_color);
+			Vec3f photon_color = wavelengthToRGB(wavelength);
+			Vec4f photon_color_with_alpha = Vec4f(photon_color[0], photon_color[1], photon_color[2], PHOTON_VISUALIZATION_ALPHA);
+
+			if(DRAW_PHOTON_PATHS){
+				RayTree::AddGeneralSegment(ray,0,hit.getT(), photon_color_with_alpha);
+			}
 			//Normal of the hit (white and fully opaque) -- make the time constant just to draw a line
 			Ray hit_normal = Ray(bounce_location, hit.getNormal());
-
-			RayTree::AddGeneralSegment(hit_normal, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
+			if(DRAW_COLORED_NORMALS){
+				RayTree::AddGeneralSegment(hit_normal, 0, NORMAL_VISUALIZATION_LENGTH, photon_color_with_alpha);
+			}
+			else{
+				RayTree::AddGeneralSegment(hit_normal, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
+			}
+			
 		}
 
 		//Change the color again to catch the refractive case (so it doesn't continue to be orange)
@@ -139,6 +157,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		double cosI = -1 * hit.getNormal().Dot3(incoming_direction);
 		double sinT2 = n * n * (1.0 - cosI * cosI);
 		if(sinT2 <= 1.0){
+			std::cout << "    Should also refract" << std::endl;
 			double cosT = sqrt(1.0 - sinT2);
 			Vec3f outgoing_direction = n * incoming_direction + (n * cosI - cosT) * hit.getNormal();
 			//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
@@ -147,6 +166,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		}
 		else{
 			//TODO: total internal refraction
+			std::cout << "    Hitting the TIR case" << std::endl;
 		}
 
 		//Old way
@@ -159,7 +179,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 
 		Vec3f find_c =  hit.getNormal();
 		find_c.Negate();
-		float c = find_c.Dot3(ray.getDirection());
+		float c = find_c.Dot3(ray.getDirection());`
 		
 		//Check for total internal refraction
 
@@ -224,7 +244,6 @@ void PhotonMapping::TracePhotons() {
 		// the initial energy for this photon 
 		//Vec3f energy = my_area/double(num) * lights[i]->getMaterial()->getEmittedColor();
 		//replace energy with photon color 
-		float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
 		Vec3f normal = lights[i]->computeNormal();
 		for (int j = 0; j < num; j++) {
 			Vec3f start = lights[i]->RandomPoint();
@@ -232,6 +251,7 @@ void PhotonMapping::TracePhotons() {
 			Vec3f direction = RandomDiffuseDirection(normal);
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
+			float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
 			TracePhoton(start,direction,wavelength,0, photon_color, REFRACTIVE_INDEX_OF_AIR);
 		}
 	}
@@ -458,6 +478,8 @@ void PhotonMapping::drawVBOs() {
 			glDisableClientState(GL_VERTEX_ARRAY);
 		}
 	}
+
+	/*
 	if(DRAW_VISUALIZATION){
 		int num_viz_edges = raytree_edge_indices.size();
 		if (num_viz_edges > 0) {
@@ -482,6 +504,7 @@ void PhotonMapping::drawVBOs() {
 			glEnable(GL_DEPTH_TEST);
 		}
 	}
+	*/
 }
 
 void PhotonMapping::cleanupVBOs() {
@@ -504,14 +527,16 @@ bool PhotonMapping::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches)
 	// intersect each of the quads
 	for (int i = 0; i < mesh->numOriginalQuads(); i++) {
 		Face *f = mesh->getOriginalQuad(i);
-		if (f->intersect(ray,h,args->intersect_backfacing)) answer = true;
+		bool backfacing_hit = false;
+		if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)) answer = true;
 	}
 
 	// intersect each of the primitives (either the patches, or the original primitives)
 	if (use_rasterized_patches) {
 		for (int i = 0; i < mesh->numRasterizedPrimitiveFaces(); i++) {
 			Face *f = mesh->getRasterizedPrimitiveFace(i);
-			if (f->intersect(ray,h,args->intersect_backfacing)) answer = true;
+			bool backfacing_hit = false;
+			if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)) answer = true;
 		}
 	} else {
 		int num_primitives = mesh->numPrimitives();

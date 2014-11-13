@@ -59,7 +59,7 @@ public:
  
   // ==========
   // RAYTRACING
-  bool intersect(const Ray &r, Hit &h, bool intersect_backfacing) const;
+  bool intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) const;
 
   // =========
   // RADIOSITY
@@ -69,8 +69,8 @@ public:
 protected:
 
   // helper functions
-  bool triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex *c, bool intersect_backfacing) const;
-  bool plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing) const;
+  bool triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex *c, bool intersect_backfacing, bool* backfacing_hit) const;
+  bool plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) const;
 
   // don't use this constructor
   Face& operator= (const Face&) { assert(0); exit(0); }

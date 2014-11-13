@@ -151,7 +151,7 @@ public:
 		num_antialias_samples = 1;
 		num_glossy_samples = 1;
 		ambient_light = Vec3f(0.1,0.1,0.1);
-		intersect_backfacing = false;
+		intersect_backfacing = true;
 		stratified_shadows = false; //Rebecca addded
 		stratified_antialiasing = false; //Rebecca added
 

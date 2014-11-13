@@ -56,20 +56,21 @@ Vec3f Face::RandomStratifiedPoint(int x_iter, int y_iter, int num_samples) const
 // =========================================================================
 // the intersection routines
 
-bool Face::intersect(const Ray &r, Hit &h, bool intersect_backfacing) const {
+bool Face::intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) const {
 	// intersect with each of the subtriangles
 	Vertex *a = (*this)[0];
 	Vertex *b = (*this)[1];
 	Vertex *c = (*this)[2];
 	Vertex *d = (*this)[3];
-	return triangle_intersect(r,h,a,b,c,intersect_backfacing) || triangle_intersect(r,h,a,c,d,intersect_backfacing);
+	return triangle_intersect(r,h,a,b,c,intersect_backfacing, backfacing_hit) || triangle_intersect(r,h,a,c,d,intersect_backfacing, backfacing_hit);
 }
 
-bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex *c, bool intersect_backfacing) const {
+bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex *c, bool intersect_backfacing, bool* backfacing_hit) const {
 
+	*backfacing_hit = false;
 	// compute the intersection with the plane of the triangle
 	Hit h2 = Hit(h);
-	if (!plane_intersect(r,h2,intersect_backfacing)) return 0;	
+	if (!plane_intersect(r,h2,intersect_backfacing, backfacing_hit)) return 0;	
 
 	// figure out the barycentric coordinates:
 	Vec3f Ro = r.getOrigin();
@@ -94,6 +95,7 @@ bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex
 				a->get().y()-b->get().y(),a->get().y()-Ro.y(),Rd.y(),
 				a->get().z()-b->get().z(),a->get().z()-Ro.z(),Rd.z()) / detA;
 
+	//Case of an intersection
 	if (beta >= -0.00001 && beta <= 1.00001 &&
 			gamma >= -0.00001 && gamma <= 1.00001 &&
 			beta + gamma <= 1.00001) {
@@ -111,7 +113,7 @@ bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex
 }
 
 
-bool Face::plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing) const {
+bool Face::plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) const {
 
 	// insert the explicit equation for the ray into the implicit equation of the plane
 
@@ -133,6 +135,11 @@ bool Face::plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing) cons
 
 	if (!intersect_backfacing && normal.Dot3(r.getDirection()) >= 0) 
 		return 0; // hit the backside
+
+	//hit the backside but that's okay in this case
+	if (normal.Dot3(r.getDirection()) >= 0){
+		*backfacing_hit = true;
+	}
 
 	double t = numer / denom;
 	if (t > EPSILON && t < h.getT()) {

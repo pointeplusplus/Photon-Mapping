@@ -19,14 +19,16 @@ bool RayTracer::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches) con
 	// intersect each of the quads
 	for (int i = 0; i < mesh->numOriginalQuads(); i++) {
 		Face *f = mesh->getOriginalQuad(i);
-		if (f->intersect(ray,h,args->intersect_backfacing)) answer = true;
+		bool backfacing_hit = false;
+		if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)) answer = true;
 	}
 
 	// intersect each of the primitives (either the patches, or the original primitives)
 	if (use_rasterized_patches) {
 		for (int i = 0; i < mesh->numRasterizedPrimitiveFaces(); i++) {
 			Face *f = mesh->getRasterizedPrimitiveFace(i);
-			if (f->intersect(ray,h,args->intersect_backfacing)) answer = true;
+			bool backfacing_hit = false;
+			if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)) answer = true;
 		}
 	} else {
 		int num_primitives = mesh->numPrimitives();
@@ -146,7 +148,8 @@ Vec3f RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
 				Ray ray_to_light = Ray(point,direction_to_light);
 				Hit hit_to_light = Hit();
 				//use direction to get intersect
-				bool intersect_with_light = mesh->getLights()[l]->intersect(ray_to_light, hit_to_light, false);
+				bool backfacing_hit = false;
+				bool intersect_with_light = mesh->getLights()[l]->intersect(ray_to_light, hit_to_light, false, &backfacing_hit);
 				assert(intersect_with_light);
 				RayTree::AddShadowSegment(ray_to_light, 0, hit_to_light.getT());
 
