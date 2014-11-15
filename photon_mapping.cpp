@@ -17,8 +17,9 @@
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
-#define DRAW_PHOTON_PATHS false
-#define DRAW_COLORED_NORMALS true
+#define DRAW_PHOTON_PATHS true
+#define DRAW_COLORED_NORMALS false
+#define DRAW_ESCAPING_PHOTONS true
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
@@ -75,8 +76,10 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	Hit hit;
 	//find the next thing or the photon to bounce off of
 	if(CastRay(ray, hit, false)){
+		Vec3f hit_normal = hit.getNormal();
 		std::cout << "    cast ray == true" << std::endl;
 		if(hit.getIsBackfacing()){
+			hit_normal = -1 * hit_normal;
 			std:: cout << "    backfacing hit" << std::endl;
 		}
 		/*
@@ -104,12 +107,12 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 				RayTree::AddGeneralSegment(ray,0,hit.getT(), photon_color_with_alpha);
 			}
 			//Normal of the hit (white and fully opaque) -- make the time constant just to draw a line
-			Ray hit_normal = Ray(bounce_location, hit.getNormal());
+			Ray hit_normal_ray = Ray(bounce_location, hit_normal);
 			if(DRAW_COLORED_NORMALS){
-				RayTree::AddGeneralSegment(hit_normal, 0, NORMAL_VISUALIZATION_LENGTH, photon_color_with_alpha);
+				RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, photon_color_with_alpha);
 			}
 			else{
-				RayTree::AddGeneralSegment(hit_normal, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
+				RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
 			}
 			
 		}
@@ -124,7 +127,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		//	(material->getReflectiveColor())[1] != 0.0 ||
 		//	(material->getReflectiveColor())[2] != 0.0){
 		if(true){ //TODO: when to reflect
-			Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit.getNormal()) * hit.getNormal());
+			Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit_normal) * hit_normal);
 			//This was for energy and RGB
 			/*
 			Vec3f bounce_reflective_color = Vec3f(energy[0]* (material->getReflectiveColor()[0]),
@@ -154,12 +157,12 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		//TODO: when to refract
 		Vec3f incoming_direction = ray.getDirection();
 		double n = current_n_val / material->getRefractiveIndex();
-		double cosI = -1 * hit.getNormal().Dot3(incoming_direction);
+		double cosI = -1 * hit_normal.Dot3(incoming_direction);
 		double sinT2 = n * n * (1.0 - cosI * cosI);
 		if(sinT2 <= 1.0){
-			std::cout << "    Should also refract" << std::endl;
+			//std::cout << "    Should also refract" << std::endl;
 			double cosT = sqrt(1.0 - sinT2);
-			Vec3f outgoing_direction = n * incoming_direction + (n * cosI - cosT) * hit.getNormal();
+			Vec3f outgoing_direction = n * incoming_direction + (n * cosI - cosT) * hit_normal;
 			//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
 			//	to do this, check angle of the normal and the hit										
 			TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), material->getRefractiveIndex());
@@ -204,6 +207,13 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		
 
 		//std::cout << "    number of segments: "  << visualization_line_segments.size() << std::endl;
+	}
+	
+	//Visualize photons even when they don't hit anything.
+	else if(DRAW_ESCAPING_PHOTONS){
+		Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit.getNormal()) * hit.getNormal());
+		//Ray bounce = Ray(bounce_location, bounce);
+		RayTree::AddGeneralSegment(ray, 0, NORMAL_VISUALIZATION_LENGTH * 5, Vec4f(0.0,0.0,0.0,1.0));
 	}
 }
 
@@ -528,7 +538,10 @@ bool PhotonMapping::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches)
 	for (int i = 0; i < mesh->numOriginalQuads(); i++) {
 		Face *f = mesh->getOriginalQuad(i);
 		bool backfacing_hit = false;
-		if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)) answer = true;
+		if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)){
+			answer = true;
+			h.setIsBackfacing(backfacing_hit);
+		}
 	}
 
 	// intersect each of the primitives (either the patches, or the original primitives)
@@ -536,12 +549,19 @@ bool PhotonMapping::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches)
 		for (int i = 0; i < mesh->numRasterizedPrimitiveFaces(); i++) {
 			Face *f = mesh->getRasterizedPrimitiveFace(i);
 			bool backfacing_hit = false;
-			if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)) answer = true;
+			if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)){
+				answer = true;
+				h.setIsBackfacing(backfacing_hit);
+			}
 		}
 	} else {
 		int num_primitives = mesh->numPrimitives();
 		for (int i = 0; i < num_primitives; i++) {
-			if (mesh->getPrimitive(i)->intersect(ray,h)) answer = true;
+			if (mesh->getPrimitive(i)->intersect(ray,h)){
+				answer = true;	
+				//TODO:fix for primitives
+				h.setIsBackfacing(false);
+			}
 		}
 	}
 	return answer;
