@@ -136,15 +136,14 @@ bool Face::plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool
 	if (!intersect_backfacing && normal.Dot3(r.getDirection()) >= 0) 
 		return 0; // hit the backside
 
-	//hit the backside but that's okay in this case
-	if (normal.Dot3(r.getDirection()) >= 0){
-		*backfacing_hit = true;
-	}
-
 	double t = numer / denom;
 	if (t > EPSILON && t < h.getT()) {
 		h.set(t,this->getMaterial(),normal);
 		assert (h.getT() >= EPSILON);
+		//hit the backside but that's okay in this case
+		if (normal.Dot3(r.getDirection()) >= 0){
+			*backfacing_hit = true;
+		}
 		return 1;
 	}
 	return 0;

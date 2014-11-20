@@ -55,7 +55,7 @@ public:
 		texture_s = t_s; texture_t = t_t; 
 	}
 
-	void setIsBackfacking(bool backfacing){
+	void setIsBackfacing(bool backfacing){
 		is_backfacing = backfacing;
 	}
 
