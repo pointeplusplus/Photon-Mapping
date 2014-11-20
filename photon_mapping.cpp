@@ -17,9 +17,9 @@
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
-#define DRAW_PHOTON_PATHS true
-#define DRAW_COLORED_NORMALS false
-#define DRAW_ESCAPING_PHOTONS true
+#define DRAW_PHOTON_PATHS false	
+#define DRAW_COLORED_NORMALS true
+#define DRAW_ESCAPING_PHOTONS false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
@@ -77,10 +77,10 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	//find the next thing or the photon to bounce off of
 	if(CastRay(ray, hit, false)){
 		Vec3f hit_normal = hit.getNormal();
-		std::cout << "    cast ray == true" << std::endl;
+//		std::cout << "    cast ray == true" << std::endl;
 		if(hit.getIsBackfacing()){
 			hit_normal = -1 * hit_normal;
-			std:: cout << "    backfacing hit" << std::endl;
+//			std:: cout << "    backfacing hit" << std::endl;
 		}
 		/*
 		//FOR DEBUG ONLY
@@ -135,7 +135,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 													energy[2]* (material->getReflectiveColor()[2]));
 			*/
 			//TODO: double check that reflection always leads to the photon going into air
-			TracePhoton(bounce_location,bounce_direction,wavelength,iter, viz_color, REFRACTIVE_INDEX_OF_AIR);
+			TracePhoton(bounce_location,bounce_direction,wavelength,iter, viz_color, current_n_val);
 		}
 		/*
 		//Diffuse
@@ -156,7 +156,11 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		// REFRACTION
 		//TODO: when to refract
 		Vec3f incoming_direction = ray.getDirection();
-		double n = current_n_val / material->getRefractiveIndex();
+		float next_n_val = material->getRefractiveIndex();
+		if(hit.getIsBackfacing()){
+			next_n_val = REFRACTIVE_INDEX_OF_AIR;
+		}
+		double n = current_n_val / next_n_val;
 		double cosI = -1 * hit_normal.Dot3(incoming_direction);
 		double sinT2 = n * n * (1.0 - cosI * cosI);
 		if(sinT2 <= 1.0){
@@ -165,7 +169,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			Vec3f outgoing_direction = n * incoming_direction + (n * cosI - cosT) * hit_normal;
 			//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
 			//	to do this, check angle of the normal and the hit										
-			TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), material->getRefractiveIndex());
+			TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), next_n_val);
 		}
 		else{
 			//TODO: total internal refraction
