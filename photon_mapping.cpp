@@ -3,27 +3,35 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include "argparser.h"
 #include "photon_mapping.h"
+#include "photon.h"
+#include "boundingbox.h"
 #include "mesh.h"
 #include "matrix.h"
 #include "face.h"
 #include "primitive.h"
 #include "raytree.h"
+#include "ray.h"
 #include "kdtree.h"
 #include "utils.h"
 #include "raytracer.h"
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
-#define DRAW_PHOTON_PATHS false
+#define DRAW_PHOTON_PATHS true
 #define DRAW_COLORED_NORMALS true
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
+#define PI 3.14159265
+
+using std::vector;
 
 Vec3f wavelengthToRGB(double wavelength);
+const Vec3f& mixColors(std::vector<Photon> wavelengths);
 
 // ==========
 // DESTRUCTOR
@@ -248,7 +256,7 @@ void PhotonMapping::TracePhotons() {
 		for (int j = 0; j < num; j++) {
 			Vec3f start = lights[i]->RandomPoint();
 			// the initial direction for this photon (for diffuse light sources)
-			Vec3f direction = RandomDiffuseDirection(normal);
+			Vec3f direction = Vec3f(0,-1,0);//RandomDiffuseDirection(normal);
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
@@ -271,6 +279,45 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 		return Vec3f(0,0,0); 
 	}
 
+	double i = .001;
+	vector<Photon> closest;
+	vector<Photon> distance;
+	//std::cout << "Collecting Photons for point: " << point << std::endl;
+	while(closest.size() < args->num_photons_to_collect){
+		//std::cout << "Round " << i << " and " << closest.size() << " photons found." << std::endl;
+		closest.clear();
+		distance.clear();
+		Vec3f bb1 = Vec3f(point.x() + i, point.y() + i, point.z() + i);
+		Vec3f bb2 = Vec3f(point.x() - i, point.y() - i, point.z() - i);
+		BoundingBox bb = BoundingBox(bb2,bb1);
+		kdtree->CollectPhotonsInBox(bb, closest);
+		for(int i = 0; i < closest.size(); i++){
+			Photon tmp = closest[i];
+			tmp.setPosition(Vec3f(tmp.getPosition().x() - point.x(), tmp.getPosition().y() - point.y(), tmp.getPosition().z() - point.z()));
+			distance.push_back(tmp);
+		}
+		std::sort( distance.begin(), distance.end(), compareLengths );
+		for(int i = distance.size() - 1; i >= 0 ; i--){
+			if( distance[i].getPosition().Length() > i )
+				distance.pop_back();
+		}
+		i *= 2;
+	}
+	while(distance.size() > args->num_photons_to_collect){
+		distance.pop_back();
+	}
+	double area = PI * pow(distance[args->num_photons_to_collect - 1].getPosition().Length(), 2.0);
+	std::cout << area << std::endl;
+	Vec3f color = Vec3f(1,1,1);//mixColors(distance);
+	std::cout << color << std::endl;
+	//color.Scale(255);
+	color.Scale(2);
+	color.set(color.r() - 1, color.g() - 1, color.b() - 1);
+	color.Scale(1/area);
+	return color;
+	
+
+	
 
 	// ================================================================
 	// ASSIGNMENT: GATHER THE INDIRECT ILLUMINATION FROM THE PHOTON MAP
@@ -283,7 +330,7 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 
 
 	// return the color
-	return Vec3f(0,0,0);
+	//return Vec3f(0,0,0);
 }
 
 

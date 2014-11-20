@@ -22,6 +22,10 @@ class Photon {
 
 	const float getWavelength() const { return wavelength; }
 
+	const double getDistance() const { return position.Length(); }
+
+    void setPosition(const Vec3f& p) { position = Vec3f(p); }   
+
 /* //I don't think that this function is needed because photons are not actually passed into TracePhoton
 	const float getCurrentNVal() const {
 
@@ -48,5 +52,7 @@ class Photon {
 	//Material* current_material;
 
 };
+
+const bool inline compareLengths (const Photon i, const Photon j) { return i.getDistance() < j.getDistance(); }
 
 #endif
