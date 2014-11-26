@@ -40,7 +40,7 @@ Vec3f wavelengthToRGB(double wavelength){
 		r = 1 - .65 * (wavelength - 700) / 80;
 
 	}
-	return Vec3f((int)(r * 255),(int)(g * 255),(int)(b * 255));
+	return Vec3f(r,g,b);
 }
 Vec3f RGBtoXYZ(Vec3f rgb){
 	Vec3f xyz;
@@ -97,10 +97,10 @@ const Vec3f& mixColors(std::vector<Photon> wavelengths){
 		g += rgb.g();
 		b += rgb.b();
 	}
-	r = (r / wavelengths.size()) / 255;
-	g = (g / wavelengths.size()) / 255;
-	b = (b / wavelengths.size()) / 255;
-	double mult = 1;// std::min( std::min(1.0 / r, 1.0 / g), 1.0 / b );
+	r = (r / wavelengths.size());
+	g = (g / wavelengths.size());
+	b = (b / wavelengths.size());
+	double mult = 1;//std::min( std::min(1.0 / r, 1.0 / g), 1.0 / b );
 	return Vec3f(r * mult, g * mult, b * mult);
 } 
 /*

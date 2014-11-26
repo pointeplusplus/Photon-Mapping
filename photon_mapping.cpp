@@ -270,7 +270,7 @@ void PhotonMapping::TracePhotons() {
 		for (int j = 0; j < num; j++) {
 			Vec3f start = lights[i]->RandomPoint();
 			// the initial direction for this photon (for diffuse light sources)
-			Vec3f direction = Vec3f(0,-1,0);//RandomDiffuseDirection(normal);
+			Vec3f direction = RandomDiffuseDirection(normal);
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
@@ -297,7 +297,7 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	vector<Photon> closest;
 	vector<Photon> distance;
 	//std::cout << "Collecting Photons for point: " << point << std::endl;
-	while(closest.size() < args->num_photons_to_collect){
+	while(distance.size() < args->num_photons_to_collect && i < .02){
 		//std::cout << "Round " << i << " and " << closest.size() << " photons found." << std::endl;
 		closest.clear();
 		distance.clear();
@@ -305,14 +305,14 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 		Vec3f bb2 = Vec3f(point.x() - i, point.y() - i, point.z() - i);
 		BoundingBox bb = BoundingBox(bb2,bb1);
 		kdtree->CollectPhotonsInBox(bb, closest);
-		for(int i = 0; i < closest.size(); i++){
-			Photon tmp = closest[i];
+
+		for(int j = 0; j < closest.size(); j++){
+			Photon tmp = closest[j];
 			tmp.setPosition(Vec3f(tmp.getPosition().x() - point.x(), tmp.getPosition().y() - point.y(), tmp.getPosition().z() - point.z()));
 			distance.push_back(tmp);
 		}
 		std::sort( distance.begin(), distance.end(), compareLengths );
-		for(int i = distance.size() - 1; i >= 0 ; i--){
-			if( distance[i].getPosition().Length() > i )
+		while(distance.size() != 0 && distance[distance.size() - 1].getPosition().Length() > i){
 				distance.pop_back();
 		}
 		i *= 2;
@@ -320,13 +320,10 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	while(distance.size() > args->num_photons_to_collect){
 		distance.pop_back();
 	}
+	if(distance.size() == 0)
+		return Vec3f(0,0,0);
 	double area = PI * pow(distance[args->num_photons_to_collect - 1].getPosition().Length(), 2.0);
-	std::cout << area << std::endl;
-	Vec3f color = Vec3f(1,1,1);//mixColors(distance);
-	std::cout << color << std::endl;
-	//color.Scale(255);
-	color.Scale(2);
-	color.set(color.r() - 1, color.g() - 1, color.b() - 1);
+	Vec3f color = mixColors(distance);
 	color.Scale(1/area);
 	return color;
 	

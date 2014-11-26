@@ -79,10 +79,10 @@ Vec3f RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
 	Vec3f diffuse_color = m->getDiffuseColor(hit.get_s(),hit.get_t());
 	if (args->gather_indirect) {
 		// photon mapping for more accurate indirect light
-		answer = diffuse_color * (photon_mapping->GatherIndirect(point, normal, ray.getDirection()) + args->ambient_light);
+		answer = diffuse_color * (photon_mapping->GatherIndirect(point, normal, ray.getDirection())/* + args->ambient_light*/);
 	} else {
 		// the usual ray tracing hack for indirect light
-		answer = diffuse_color * args->ambient_light;
+		answer = diffuse_color/* * args->ambient_light*/;
 	}			
 
 	// ----------------------------------------------
