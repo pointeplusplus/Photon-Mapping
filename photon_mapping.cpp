@@ -21,7 +21,8 @@
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
-#define DRAW_PHOTON_PATHS true
+#define DIRECTED_LIGHT false
+#define DRAW_PHOTON_PATHS false
 #define DRAW_COLORED_NORMALS true
 #define DRAW_ESCAPING_PHOTONS false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
@@ -112,7 +113,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		if(iter != 0 || !kdtree){
 			//visualization_line_segments.push_back(LineSegment(position, bounce_location, viz_color));	
 			Vec3f photon_color = wavelengthToRGB(wavelength);
-			Vec4f photon_color_with_alpha = Vec4f(photon_color[0], photon_color[1], photon_color[2], PHOTON_VISUALIZATION_ALPHA);
+ 			Vec4f photon_color_with_alpha = Vec4f(photon_color[0], photon_color[1], photon_color[2], PHOTON_VISUALIZATION_ALPHA);
 
 			if(DRAW_PHOTON_PATHS){
 				RayTree::AddGeneralSegment(ray,0,hit.getT(), photon_color_with_alpha);
@@ -125,18 +126,13 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			else{
 				RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
 			}
-			
 		}
 
 		//Change the color again to catch the refractive case (so it doesn't continue to be orange)
 		viz_color = colors[iter%colors.size()];
 		iter++;
 
-
 		//If we are reflective
-		//if((material->getReflectiveColor())[0] != 0.0 || 
-		//	(material->getReflectiveColor())[1] != 0.0 ||
-		//	(material->getReflectiveColor())[2] != 0.0){
 		if(true){ //TODO: when to reflect
 			Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit_normal) * hit_normal);
 			//This was for energy and RGB
@@ -148,22 +144,6 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			//TODO: double check that reflection always leads to the photon going into air
 			TracePhoton(bounce_location,bounce_direction,wavelength,iter, viz_color, current_n_val);
 		}
-		/*
-		//Diffuse
-		//TODO: maybe remove the raytree segment
-		if((material->getDiffuseColor())[0] != 0.0 || 
-			(material->getDiffuseColor())[1] != 0.0 ||
-			(material->getReflectiveColor())[2] != 0.0){
-
-			Vec3f bounce_direction = Vec3f(2*GLOBAL_mtrand.rand()-1, 2*GLOBAL_mtrand.rand()-1, 2*GLOBAL_mtrand.rand()-1);
-			Vec3f bounce_diffuse_color = Vec3f(energy[0]* (material->getDiffuseColor()[0]),
-												energy[1]* (material->getDiffuseColor()[1]),
-												energy[2]* (material->getDiffuseColor()[2]));
-
-			bounce_direction.Normalize();
-			TracePhoton(bounce_location,bounce_direction,bounce_diffuse_color,iter, viz_color);
-		}	
-		*/
 		// REFRACTION
 		//TODO: when to refract
 		Vec3f incoming_direction = ray.getDirection();
@@ -186,7 +166,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		}
 		else{
 			//TODO: total internal refraction
-			std::cout << "    Hitting the TIR case" << std::endl;
+			//std::cout << "    Hitting the TIR case" << std::endl;
 		}
 	}
 	
@@ -239,7 +219,11 @@ void PhotonMapping::TracePhotons() {
 		for (int j = 0; j < num; j++) {
 			Vec3f start = lights[i]->RandomPoint();
 			// the initial direction for this photon (for diffuse light sources)
-			Vec3f direction = Vec3f(1,0.25,0);//RandomDiffuseDirection(normal);
+			Vec3f direction = RandomDiffuseDirection(normal);
+			if(DIRECTED_LIGHT){
+				
+				direction = Vec3f(1,0.25,0);
+			}
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)

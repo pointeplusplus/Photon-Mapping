@@ -40,7 +40,7 @@ Vec3f wavelengthToRGB(double wavelength){
 		r = 1 - .65 * (wavelength - 700) / 80;
 
 	}
-	return Vec3f((int)(r * 255),(int)(g * 255),(int)(b * 255));
+	return Vec3f(r,g,b);
 }
 Vec3f RGBtoXYZ(Vec3f rgb){
 	Vec3f xyz;
