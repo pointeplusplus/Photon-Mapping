@@ -250,7 +250,7 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	vector<Photon> closest;
 	vector<Photon> distance;
 	//std::cout << "Collecting Photons for point: " << point << std::endl;
-	while(distance.size() < args->num_photons_to_collect && i < .02){
+	while(distance.size() < args->num_photons_to_collect){
 		//std::cout << "Round " << i << " and " << closest.size() << " photons found." << std::endl;
 		closest.clear();
 		distance.clear();
