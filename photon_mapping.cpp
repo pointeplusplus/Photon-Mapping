@@ -249,8 +249,9 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	double i = .001;
 	vector<Photon> closest;
 	vector<Photon> distance;
+	vector<double> radii;
 	//std::cout << "Collecting Photons for point: " << point << std::endl;
-	while(distance.size() < args->num_photons_to_collect){
+	while(distance.size() < args->num_photons_to_collect && i < .4){
 		//std::cout << "Round " << i << " and " << closest.size() << " photons found." << std::endl;
 		closest.clear();
 		distance.clear();
@@ -266,7 +267,7 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 		}
 		std::sort( distance.begin(), distance.end(), compareLengths );
 		while(distance.size() != 0 && distance[distance.size() - 1].getPosition().Length() > i){
-				distance.pop_back();
+			distance.pop_back();
 		}
 		i *= 2;
 	}
@@ -275,9 +276,11 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	}
 	if(distance.size() == 0)
 		return Vec3f(0,0,0);
-	double area = PI * pow(distance[args->num_photons_to_collect - 1].getPosition().Length(), 2.0);
+	
+	double area = PI * pow(distance[distance.size() - 1].getPosition().Length(), 2.0);
 	Vec3f color = mixColors(distance);
-	color.Scale(1/area);
+	color.Scale(1/(area * distance.size()));
+	color.Scale(distance.size()/args->num_photons_to_collect);
 	return color;
 	
 

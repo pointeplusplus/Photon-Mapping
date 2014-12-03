@@ -22,8 +22,8 @@ Image calculateImageDifference(Image& a, Image& c){
 int main() {
 	Image full_spectrum;
 	Image full_bad;
-	full_spectrum.Load("debug/full.ppm");
-	full_bad.Load("full.ppm");
+	full_spectrum.Load("A.ppm");
+	full_bad.Load("B.ppm");
 	Image diff = calculateImageDifference(full_spectrum, full_bad);
 	diff.Save("diff.ppm");
 }
