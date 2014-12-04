@@ -100,8 +100,7 @@ const Vec3f& mixColors(std::vector<Photon> wavelengths){
 	r = (r / wavelengths.size());
 	g = (g / wavelengths.size());
 	b = (b / wavelengths.size());
-	double mult = 1;//std::min( std::min(1.0 / r, 1.0 / g), 1.0 / b );
-	return Vec3f(r * mult, g * mult, b * mult);
+	return Vec3f(r, g, b);
 } 
 /*
 int main() {
