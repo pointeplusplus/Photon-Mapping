@@ -21,10 +21,10 @@
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
-#define DIRECTED_LIGHT false
-#define DRAW_PHOTON_PATHS false
+#define DIRECTED_LIGHT true
+#define DRAW_PHOTON_PATHS true
 #define DRAW_COLORED_NORMALS true
-#define DRAW_ESCAPING_PHOTONS false
+#define DRAW_ESCAPING_PHOTONS true
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
@@ -57,14 +57,6 @@ PhotonMapping::~PhotonMapping() {
 void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction, 
 				const float wavelength, int iter, Vec4f viz_color, float current_n_val) {
 
-	//std::cout << "In trace photon" << std::endl;
-
-	//FOR DEBUG ONLY
-	if(viz_color[0] == 1.0 && viz_color[1] == 0.5 && viz_color[2] == 0.0){
-		//std::cout << "In trace photon with refraction color" << std::endl;	
-	}
-
-
 	// TODO: something else with this vector other than making it again every iteration
 	std::vector<Vec4f> colors;
 	
@@ -74,8 +66,6 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	colors.push_back(Vec4f(0.0, 1.0, 0.0, PHOTON_VISUALIZATION_ALPHA)); // green
 	colors.push_back(Vec4f(1.0, 1.0, 0.0, PHOTON_VISUALIZATION_ALPHA)); // yellow
 	colors.push_back(Vec4f(0.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA)); // cyan
-	
-	//colors.push_back(Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA));
 
 	//Add this photon to thee kd tree
 	Photon* this_iteration_photon = new Photon(position, direction, wavelength, iter);
@@ -132,8 +122,10 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		viz_color = colors[iter%colors.size()];
 		iter++;
 
+		float refract_reflect_random = GLOBAL_mtrand.rand();
+
 		//If we are reflective
-		if(true){ //TODO: when to reflect
+		if(refract_reflect_random < 0.8){ //TODO: when to reflect
 			Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit_normal) * hit_normal);
 			//This was for energy and RGB
 			/*
@@ -146,23 +138,25 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		}
 		// REFRACTION
 		//TODO: when to refract
-		Vec3f incoming_direction = ray.getDirection();
-		float next_n_val = revisedNHackFunction(wavelength, material->getRefractiveIndex());
-		//float next_n_val = material->getRefractiveIndex();
-		if(hit.getIsBackfacing()){
-			next_n_val = revisedNHackFunction(wavelength, REFRACTIVE_INDEX_OF_AIR);
-			//next_n_val = REFRACTIVE_INDEX_OF_AIR;
-		}
-		double n = current_n_val / next_n_val;
-		double cosI = -1 * hit_normal.Dot3(incoming_direction);
-		double sinT2 = n * n * (1.0 - cosI * cosI);
-		if(sinT2 <= 1.0){
+		if(refract_reflect_random >= 0.8){
+			Vec3f incoming_direction = ray.getDirection();
+			float next_n_val = revisedNHackFunction(wavelength, material->getRefractiveIndex());
+			//float next_n_val = material->getRefractiveIndex();
+			if(hit.getIsBackfacing()){
+				next_n_val = revisedNHackFunction(wavelength, REFRACTIVE_INDEX_OF_AIR);
+				//next_n_val = REFRACTIVE_INDEX_OF_AIR;
+			}
+			double n = current_n_val / next_n_val;
+			double cosI = -1 * hit_normal.Dot3(incoming_direction);
+			double sinT2 = n * n * (1.0 - cosI * cosI);
+			if(sinT2 <= 1.0){
 
-			double cosT = sqrt(1.0 - sinT2);
-			Vec3f outgoing_direction = n * incoming_direction + (n * cosI - cosT) * hit_normal;
-			//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
-			//	to do this, check angle of the normal and the hit										
-			TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), next_n_val);
+				double cosT = sqrt(1.0 - sinT2);
+				Vec3f outgoing_direction = n * incoming_direction + (n * cosI - cosT) * hit_normal;
+				//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
+				//	to do this, check angle of the normal and the hit										
+				TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), next_n_val);
+			}
 		}
 		else{
 			//TODO: total internal refraction
@@ -222,7 +216,11 @@ void PhotonMapping::TracePhotons() {
 			Vec3f direction = RandomDiffuseDirection(normal);
 			if(DIRECTED_LIGHT){
 				
-				direction = Vec3f(1,0.25,0);
+				//slightly up
+				//direction = Vec3f(1,0.25,0);
+
+				//straight down
+				direction = Vec3f(0.0, -1.0, 0.0);
 			}
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);

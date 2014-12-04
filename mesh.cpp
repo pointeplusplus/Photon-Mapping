@@ -206,6 +206,7 @@ void Mesh::Load(const std::string &input_file, ArgParser *_args) {
 			assert (a >= 0 && a < numVertices());
 			assert (b >= 0 && b < numVertices());
 			assert (c >= 0 && c < numVertices());
+			if(!(d >= 0 && d < numVertices())) std:: cout << a << " " << b << " " << c << " " << d << std::endl;
 			assert (d >= 0 && d < numVertices());
 			assert (active_material != NULL);
 			addOriginalQuad(getVertex(a),getVertex(b),getVertex(c),getVertex(d),active_material);

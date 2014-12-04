@@ -12,7 +12,7 @@ class Photon {
 
 	// CONSTRUCTOR
 	Photon(const Vec3f &p, const Vec3f &d, const float &w, int b) :
-		position(p),direction_from(d),wavelength(w),bounce(b) {}
+		position(p),direction_from(d),wavelength(w),bounce(b){}
 
 	// ACCESSORS
 	const Vec3f& getPosition() const { return position; }
@@ -23,6 +23,8 @@ class Photon {
 	const float getWavelength() const { return wavelength; }
 
 	const double getDistance() const { return position.Length(); }
+
+	//Vec3f getNormal() const { return normal; }
 
     void setPosition(const Vec3f& p) { position = Vec3f(p); }   
 
@@ -44,8 +46,10 @@ class Photon {
 	// REPRESENTATION
 	Vec3f position;
 	Vec3f direction_from;
+	//Vec3f normal;
 	//Vec3f energy;
 	int bounce;
+
 
 	float wavelength;
 
