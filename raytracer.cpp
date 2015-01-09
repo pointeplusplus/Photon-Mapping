@@ -150,7 +150,7 @@ Vec3f RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
 				//use direction to get intersect
 				bool backfacing_hit = false;
 				bool intersect_with_light = mesh->getLights()[l]->intersect(ray_to_light, hit_to_light, false, &backfacing_hit);
-				assert(intersect_with_light);
+				//assert(intersect_with_light);
 				RayTree::AddShadowSegment(ray_to_light, 0, hit_to_light.getT());
 
 				//check intersections with everything else
