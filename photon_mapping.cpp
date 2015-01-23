@@ -21,7 +21,7 @@
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
-#define DIRECTED_LIGHT true
+#define DIRECTED_LIGHT false
 #define DRAW_PHOTON_PATHS true
 #define DRAW_COLORED_NORMALS true
 #define DRAW_ESCAPING_PHOTONS true
@@ -123,53 +123,68 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		iter++;
 
 		float refract_reflect_random = GLOBAL_mtrand.rand();
+		//Reflectence for s and p polarized light respectively
+		float rs = 0;
+		float rp = 0;
+		Vec3f refraction_direction = Vec3f(0,0,0); // Will be assigned later
+		//Refraction calculations for Frensel equations
+		Vec3f incoming_direction = ray.getDirection();
+		float incoming_angle_with_surface = hit_normal.AngleBetween(-1 * incoming_direction);
 
-		//If we are reflective
-		if(refract_reflect_random < 0.8){ //TODO: when to reflect
-			Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit_normal) * hit_normal);
-			//This was for energy and RGB
-			/*
-			Vec3f bounce_reflective_color = Vec3f(energy[0]* (material->getReflectiveColor()[0]),
-													energy[1]* (material->getReflectiveColor()[1]),
-													energy[2]* (material->getReflectiveColor()[2]));
-			*/
+		//TODO: fix next_n_val
+		float next_n_val = revisedNHackFunction(wavelength, material->getRefractiveIndex());
+		//float next_n_val = material->getRefractiveIndex();
+		if(hit.getIsBackfacing()){
+			next_n_val = revisedNHackFunction(wavelength, REFRACTIVE_INDEX_OF_AIR);
+			//next_n_val = REFRACTIVE_INDEX_OF_AIR;
+		}
+		double n = current_n_val / next_n_val;
+		double cosI = -1 * hit_normal.Dot3(incoming_direction);
+		double sinT2 = n * n * (1.0 - cosI * cosI);
+		if(sinT2 <= 1.0){
+			double cosT = sqrt(1.0 - sinT2);
+			refraction_direction = n * incoming_direction + (n * cosI - cosT) * hit_normal;
+			Vec3f outgoing_angle_with_surface = refractoin_direction.AngleBetween(-1 * hit_normal);
+			//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
+			//	to do this, check angle of the normal and the hit
+
+			float rs_numerator = (current_n_val * cos(incoming_angle_with_surface)) - (next_n_val * cos(outgoing_angle_with_surface));
+			float rs_denominator = (current_n_val * cos(incoming_angle_with_surface)) + (next_n_val * cos(outgoing_angle_with_surface));
+			rs = pow(rs_numerator/rs_denominator, 2);
+			
+			float rp_numerator = (current_n_val * cos(outgoing_angle_with_surface)) - (next_n_val * cos(incoming_angle_with_surface));
+			float rp_denominator = (current_n_val * cos(outgoing_angle_with_surface)) + (next_n_val * cos(incoming_angle_with_surface));
+			rp = pow(rp_numerator/rp_denominator, 2);
+		}
+		//With total internal reflection, reflectance values are 1
+		else{
+			rs = 1;
+			rp = 1;
+		}
+		//For unpolarized light, as I am assuming my light source is
+		float reflectance = (rs + rp) / 2.0;
+		assert(reflectance >= 0 && reflectance <= 1);
+
+		//REFLECTION
+		if(refract_reflect_random < 0.8){
+			Vec3f reflection_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit_normal) * hit_normal);
 			//TODO: double check that reflection always leads to the photon going into air
-			TracePhoton(bounce_location,bounce_direction,wavelength,iter, viz_color, current_n_val);
+			TracePhoton(bounce_location,reflection_direction,wavelength,iter, viz_color, current_n_val);
 		}
 		// REFRACTION
-		//TODO: when to refract
 		if(refract_reflect_random >= 0.8){
-			Vec3f incoming_direction = ray.getDirection();
-			float next_n_val = revisedNHackFunction(wavelength, material->getRefractiveIndex());
-			//float next_n_val = material->getRefractiveIndex();
-			if(hit.getIsBackfacing()){
-				next_n_val = revisedNHackFunction(wavelength, REFRACTIVE_INDEX_OF_AIR);
-				//next_n_val = REFRACTIVE_INDEX_OF_AIR;
-			}
-			double n = current_n_val / next_n_val;
-			double cosI = -1 * hit_normal.Dot3(incoming_direction);
-			double sinT2 = n * n * (1.0 - cosI * cosI);
-			if(sinT2 <= 1.0){
+			TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), next_n_val);
+		}
 
-				double cosT = sqrt(1.0 - sinT2);
-				Vec3f outgoing_direction = n * incoming_direction + (n * cosI - cosT) * hit_normal;
-				//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
-				//	to do this, check angle of the normal and the hit										
-				TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), next_n_val);
-			}
-		}
-		else{
-			//TODO: total internal refraction
-			//std::cout << "    Hitting the TIR case" << std::endl;
-		}
 	}
-	
+	cat cat cat
 	//Visualize photons even when they don't hit anything.
 	else if(DRAW_ESCAPING_PHOTONS){
 		Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit.getNormal()) * hit.getNormal());
 		//Ray bounce = Ray(bounce_location, bounce);
 		RayTree::AddGeneralSegment(ray, 0, NORMAL_VISUALIZATION_LENGTH * 5, Vec4f(0.0,0.0,0.0,1.0));
 	}
+		
 }
 
 // ========================================================================
@@ -249,7 +264,7 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	vector<Photon> distance;
 	vector<double> radii;
 	//std::cout << "Collecting Photons for point: " << point << std::endl;
-	while(distance.size() < args->num_photons_to_collect && i < .4){
+	while(distance.size() < args->num_photons_to_collect){
 		//std::cout << "Round " << i << " and " << closest.size() << " photons found." << std::endl;
 		closest.clear();
 		distance.clear();
@@ -281,21 +296,6 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	color.Scale(distance.size()/args->num_photons_to_collect);
 	return color;
 	
-
-	
-
-	// ================================================================
-	// ASSIGNMENT: GATHER THE INDIRECT ILLUMINATION FROM THE PHOTON MAP
-	// ================================================================
-
-
-	// collect the closest args->num_photons_to_collect photons
-	// determine the radius that was necessary to collect that many photons
-	// average the energy of those photons over that radius
-
-
-	// return the color
-	//return Vec3f(0,0,0);
 }
 
 

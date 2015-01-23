@@ -307,7 +307,7 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		args->gather_indirect = true;
 		args->raytracing_animation = !args->raytracing_animation;
 		if (args->raytracing_animation) {
-			raytracing_skip = my_max(args->width,args->height) / 10;
+			raytracing_skip = 1;//my_max(args->width,args->height) / 10;
 			if (raytracing_skip % 2 == 0) raytracing_skip++;
 			assert (raytracing_skip >= 1);
 			raytracing_x = raytracing_skip/2;
@@ -593,7 +593,7 @@ void GLCanvas::idle() {
 		glLoadIdentity();
 		glPointSize(raytracing_skip);
 		glBegin(GL_POINTS);
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < 400; i++) {
 			if (!DrawPixel()) {
 	args->raytracing_animation = false;
 	break;
