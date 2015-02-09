@@ -144,7 +144,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		if(sinT2 <= 1.0){
 			double cosT = sqrt(1.0 - sinT2);
 			refraction_direction = n * incoming_direction + (n * cosI - cosT) * hit_normal;
-			Vec3f outgoing_angle_with_surface = refractoin_direction.AngleBetween(-1 * hit_normal);
+			float outgoing_angle_with_surface = refraction_direction.AngleBetween(-1 * hit_normal);
 			//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
 			//	to do this, check angle of the normal and the hit
 
@@ -161,9 +161,16 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			rs = 1;
 			rp = 1;
 		}
+
 		//For unpolarized light, as I am assuming my light source is
 		float reflectance = (rs + rp) / 2.0;
 		assert(reflectance >= 0 && reflectance <= 1);
+
+
+		//TODO: remove the printing -- it is for testing purposes only
+		std::cout << "Reflectence: " << reflectance << std::endl;
+		std::cout << "    rs: " << rs << std::endl;
+		std::cout << "    rp: " << rp << std::endl;
 
 		//REFLECTION
 		if(refract_reflect_random < 0.8){
@@ -173,11 +180,10 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		}
 		// REFRACTION
 		if(refract_reflect_random >= 0.8){
-			TracePhoton(bounce_location,outgoing_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), next_n_val);
+			TracePhoton(bounce_location,refraction_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), next_n_val);
 		}
 
 	}
-	cat cat cat
 	//Visualize photons even when they don't hit anything.
 	else if(DRAW_ESCAPING_PHOTONS){
 		Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit.getNormal()) * hit.getNormal());
