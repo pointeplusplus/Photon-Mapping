@@ -28,20 +28,40 @@
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
-#define PI 3.14159265
+#define PI 3.14159265			
 
 using std::vector;
+
+//std::vector<float> DIAMOND_B = {0.3306, 4.3356};
+//std::vector<float> DIAMOND_C = {175, 106};
+//std::vector<float> AIR_B = {};
+//std::vector<float> AIR_C = {};
 
 Vec3f wavelengthToRGB(double wavelength);
 const Vec3f& mixColors(std::vector<Photon> wavelengths);
 
+//TODO: change wavelength?
+float nValueSellmeier(float wavelength, vector<float> B, vector<float> C){
 
-// TODO: Remove this hack
-float revisedNHackFunction(float wavelength, float n_val){
-
+	// If we don't have any Sellmeier values, return the refractive index of air
+	if(B.size() < 1 || C.size() < 1){
+		return REFRACTIVE_INDEX_OF_AIR;
+	}
 	//value from -0.5 to .5 based on wavelength, centered around 580, which is the middle wavelength
-	float wavelength_factor = (wavelength - 580) / 400.0;
-	return n_val + wavelength_factor;
+	//float wavelength_factor = (wavelength - 580) / 400.0;
+	//return n_val + wavelength_factor;
+	float frac = 0; 
+	for(unsigned int val = 0; val < B.size() && val < C.size(); val++){
+		frac += B[val] * pow(wavelength, 2) / (pow(wavelength, 2) - C[val]);	
+	}
+	
+	frac += 1;
+	assert (frac > 0);
+	//Test prints:
+	std::cout << "B and C length: " << B.size() << " " << C.size() << std::endl;
+	std::cout << "    Wavelength: " << wavelength << std::endl;
+	std::cout << "    N value: " << sqrt(frac) << std::endl;
+	return sqrt(frac);
 }
 
 // ==========
@@ -132,11 +152,11 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		float incoming_angle_with_surface = hit_normal.AngleBetween(-1 * incoming_direction);
 
 		//TODO: fix next_n_val
-		float next_n_val = revisedNHackFunction(wavelength, material->getRefractiveIndex());
+		float next_n_val = nValueSellmeier(wavelength, material->getRefractiveB(), material->getRefractiveC());
 		//float next_n_val = material->getRefractiveIndex();
 		if(hit.getIsBackfacing()){
-			next_n_val = revisedNHackFunction(wavelength, REFRACTIVE_INDEX_OF_AIR);
-			//next_n_val = REFRACTIVE_INDEX_OF_AIR;
+			//next_n_val = nValueSellmeier(wavelength, AIR_B, AIR_C);
+			next_n_val = REFRACTIVE_INDEX_OF_AIR;
 		}
 		double n = current_n_val / next_n_val;
 		double cosI = -1 * hit_normal.Dot3(incoming_direction);
@@ -168,9 +188,9 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 
 
 		//TODO: remove the printing -- it is for testing purposes only
-		std::cout << "Reflectence: " << reflectance << std::endl;
-		std::cout << "    rs: " << rs << std::endl;
-		std::cout << "    rp: " << rp << std::endl;
+		//std::cout << "Reflectence: " << reflectance << std::endl;
+		//std::cout << "    rs: " << rs << std::endl;
+		//std::cout << "    rp: " << rp << std::endl;
 
 		//REFLECTION
 		if(refract_reflect_random < 0.8){

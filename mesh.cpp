@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "vertex.h"
 #include "boundingbox.h"
@@ -246,10 +247,12 @@ void Mesh::Load(const std::string &input_file, ArgParser *_args) {
 		} 
 		else if (token == "material") {
 			// this is not standard .obj format!!
+			std::vector<float> B;
+			std::vector<float> C;
 			std::string texture_file = "";
 			Vec3f diffuse(0,0,0);
 			double r,g,b;
-			double n = 1.0; // Refractive index default to air
+			float refractive_val = 1.0; //to hold Sellemier values
 			objfile >> token;
 			if (token == "diffuse") {
 				objfile >> r >> g >> b;
@@ -271,14 +274,22 @@ void Mesh::Load(const std::string &input_file, ArgParser *_args) {
 				objfile >> roughness;
 				objfile >> token;
 			}
-			if (token == "refractive"){
-				objfile >> n;
+			//store B values for refraction
+			if (token == "B"){
+				objfile >> refractive_val;
+				B.push_back(refractive_val);
 				objfile >> token;
 			}
+			if (token == "C"){
+				objfile >> refractive_val;
+				B.push_back(refractive_val);
+				objfile >> token;
+			}
+			
 			assert (token == "emitted");
 			objfile >> r >> g >> b;
 			emitted = Vec3f(r,g,b);
-			materials.push_back(new Material(texture_file,diffuse,reflective,emitted,roughness, n));
+			materials.push_back(new Material(texture_file,diffuse,reflective,emitted,roughness,B,C));
 		} 
 		else {
 			std::cout << "UNKNOWN TOKEN " << token << std::endl;

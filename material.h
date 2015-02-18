@@ -4,6 +4,7 @@
 #include "glCanvas.h"
 #include <cassert>
 #include <string>
+#include <vector>
 #include "vectors.h"
 #include "image.h"
 
@@ -20,7 +21,7 @@ class Material {
 public:
 
 	Material(const std::string &texture_file, const Vec3f &d_color,
-		 const Vec3f &r_color, const Vec3f &e_color, double roughness_, double n) {
+		 const Vec3f &r_color, const Vec3f &e_color, double roughness_, std::vector<float> B, std::vector<float> C) {
 		textureFile = texture_file;
 		if (textureFile != "") {
 			image = new Image(textureFile);
@@ -35,7 +36,8 @@ public:
 		roughness = roughness_;
 		// need to initialize texture_id after glut has started
 		texture_id = 0;
-		refractive_index = n;
+		refractive_B = B;
+		refractive_C = C;
 	}
 	
 	~Material();
@@ -50,7 +52,9 @@ public:
 	GLuint getTextureID();
 
 	// Rebecca added
-	float getRefractiveIndex(){ return refractive_index; }
+	//float getRefractiveIndex(){ return refractive_index; }
+	std::vector<float> getRefractiveB() const { return refractive_B; }
+	std::vector<float> getRefractiveC() const { return refractive_C; }
 
 	// SHADE
 	// compute the contribution to local illumination at this point for
@@ -71,7 +75,8 @@ protected:
 	Vec3f diffuseColor;
 	Vec3f reflectiveColor;
 	Vec3f emittedColor;
-	float refractive_index;
+	std::vector<float> refractive_B;
+	std::vector<float> refractive_C;
 	double roughness;
 
 	std::string textureFile;
