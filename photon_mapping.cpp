@@ -93,6 +93,7 @@ void PhotonMapping::printOutputFile(){
 	output << "Photons shot: " << args->num_photons_to_shoot << std::endl;
 	output << "Input file: " << args->input_file << std::endl;
 	output << "Number of bounces: " << args->num_bounces << std::endl;
+	output << "Number of shadow samples: " << args->num_shadow_samples << std::endl;
 	Face* face;
 	output << "Face_Number Face_Material Normal Area Rays_Entering_Face Rays_Leaving_Face" << std::endl;
 	for (int f = 0; f < mesh->numFaces(); f++){
