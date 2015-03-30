@@ -521,7 +521,7 @@ void GLCanvas::TracePhoton(double i, double j) {
 			r = mesh->camera->generateRay(x,y); 
 			Hit hit = Hit();
 			//TODO: determine what color antialiasing photons should be, if any
-			photon_mapping->TracePhoton(r.getOrigin(), r.getDirection(), 580, 0, Vec4f(1.0, 1.0, 1.0, 0.7), REFRACTIVE_INDEX_OF_AIR);
+			photon_mapping->TracePhoton(r.getOrigin(), r.getDirection(), 580, 0, Vec4f(1.0, 1.0, 1.0, 0.7), NULL, REFRACTIVE_INDEX_OF_AIR, true);
 			//TracePhoton(const Vec3f &position, const Vec3f &direction, const Vec3f &energy, int iter, Vec4f viz_color);
 
 		}

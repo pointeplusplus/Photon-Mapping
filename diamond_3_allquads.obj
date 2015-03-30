@@ -11,7 +11,10 @@ emitted 0 0 0
 material 
 diffuse 0.1 0.1 0.1
 reflective 0.6 0.4 0.2
-refractive 2.419
+B 0.3306
+B 4.3356
+C 175
+C 106
 emitted 0 0 0
 
 m 2

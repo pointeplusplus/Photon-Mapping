@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <fstream>
 
 #include "argparser.h"
 #include "photon_mapping.h"
@@ -24,7 +25,7 @@
 #define DIRECTED_LIGHT false
 #define DRAW_PHOTON_PATHS true
 #define DRAW_COLORED_NORMALS true
-#define DRAW_ESCAPING_PHOTONS true
+#define DRAW_ESCAPING_PHOTONS false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
@@ -37,12 +38,16 @@ using std::vector;
 //std::vector<float> AIR_B = {};
 //std::vector<float> AIR_C = {};
 
+
+
 Vec3f wavelengthToRGB(double wavelength);
 const Vec3f& mixColors(std::vector<Photon> wavelengths);
 
 //TODO: change wavelength?
 float nValueSellmeier(float wavelength, vector<float> B, vector<float> C){
 
+	//std::cout << "In Sellmeier" << std::endl;
+	//std::cout << "    B and C length: " << B.size() << " " << C.size() << std::endl;
 	// If we don't have any Sellmeier values, return the refractive index of air
 	if(B.size() < 1 || C.size() < 1){
 		return REFRACTIVE_INDEX_OF_AIR;
@@ -58,9 +63,9 @@ float nValueSellmeier(float wavelength, vector<float> B, vector<float> C){
 	frac += 1;
 	assert (frac > 0);
 	//Test prints:
-	std::cout << "B and C length: " << B.size() << " " << C.size() << std::endl;
-	std::cout << "    Wavelength: " << wavelength << std::endl;
-	std::cout << "    N value: " << sqrt(frac) << std::endl;
+	
+	//std::cout << "    Wavelength: " << wavelength << std::endl;
+	//std::cout << "    N value: " << sqrt(frac) << std::endl;
 	return sqrt(frac);
 }
 
@@ -71,15 +76,47 @@ PhotonMapping::~PhotonMapping() {
 	delete kdtree;
 }
 
+void PhotonMapping::printEscapingFacePhoton(){
+	//After all of the photons have been traced, print the light escaping each face
+	std::cout << "Number of rays leaving faces:" << std::endl;
+	Face* face;
+	for (int f = 0; f < mesh->numFaces(); f++){
+		face = mesh->getFace(f);
+		std::cout << "    " << f << ": " << face->getNumRaysLeavingFace() << "   ";
+	}
+	std::cout << "filename: " << args->output_file << std::endl; 
+}
+
+void PhotonMapping::printOutputFile(){
+	std::ofstream output(args->output_file.c_str());
+	std::cout << "outputfile " << args->output_file.c_str() << std::endl;
+	output << "Photons shot: " << args->num_photons_to_shoot << std::endl;
+	output << "Input file: " << args->input_file << std::endl;
+	output << "Number of bounces: " << args->num_bounces << std::endl;
+	Face* face;
+	output << "Face_Number Face_Material Normal Area Rays_Entering_Face Rays_Leaving_Face" << std::endl;
+	for (int f = 0; f < mesh->numFaces(); f++){
+		face = mesh->getFace(f);
+		Vec3f normal = face->computeNormal();
+		output << f << ": " 
+			<< face->getMaterial()->getName() << " "
+			<< "{" << normal.x() << "," << normal.y() << "," << normal.z() << "} "
+			<< face->getArea() << " "
+			<< face->getNumRaysEnteringFace() << " "
+			<< face->getNumRaysLeavingFace() << std::endl;
+	}
+}
+
 // ========================================================================
 // Recursively trace a single photon
 
 void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction, 
-				const float wavelength, int iter, Vec4f viz_color, float current_n_val) {
+				const float wavelength, int iter, Vec4f viz_color, Material* current_material, float current_n_val, bool single_photon) {
 
+	// NOTE: current_material can == NULL 
 	// TODO: something else with this vector other than making it again every iteration
 	std::vector<Vec4f> colors;
-	
+
 	colors.push_back(Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA)); // magenta
 	//colors.push_back(Vec4f(1.0, 0.0, 0.0, PHOTON_VISUALIZATION_ALPHA)); // red
 	colors.push_back(Vec4f(0.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA)); // blue
@@ -94,19 +131,43 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	if(kdtree){
 		kdtree->AddPhoton(*this_iteration_photon);
 	}
-	
+
 	//If we can bounce no more, return
-	if (iter >= args->num_bounces){
+	// Check to see if the material absorbs the light 
+	// TODO:  allow there to be a more complicated absorbing pattern that just a straight percentage
+	float absorb_random = GLOBAL_mtrand.rand();
+	if (iter >= args->num_bounces || (current_material != NULL && absorb_random < current_material->getAbsorbed() ) ){
+		//If this is the only photon, print about face data
+		if(single_photon){
+			printEscapingFacePhoton();
+			printOutputFile();
+		}
 		return;
 	}
 
 	Ray ray = Ray(position, direction);
+	
 	Hit hit;
+	
 	//find the next thing or the photon to bounce off of
 	if(CastRay(ray, hit, false)){
+
 		Vec3f hit_normal = hit.getNormal();
 		if(hit.getIsBackfacing()){
 			hit_normal = -1 * hit_normal;
+
+			//if the hit is back, light is escaping out of this face
+			if(hit.getFace() != NULL){
+				hit.getFace()->incrementNumRaysLeaving();
+			}
+
+		}
+		else{
+
+			//if the hit is not back, light is entering this face
+			if(hit.getFace() != NULL){
+				hit.getFace()->incrementNumRaysEntering();
+			}
 
 		}
 
@@ -120,7 +181,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		
 		//Only add the photon to the visualization if it isn't the first bounce (iter is already incremented)
 		// checking kdtree determines whether or not this was called from pressing t.  If so, draw main segment also.
-		if(iter != 0 || !kdtree){
+		if(iter != 0 || single_photon){
 			//visualization_line_segments.push_back(LineSegment(position, bounce_location, viz_color));	
 			Vec3f photon_color = wavelengthToRGB(wavelength);
  			Vec4f photon_color_with_alpha = Vec4f(photon_color[0], photon_color[1], photon_color[2], PHOTON_VISUALIZATION_ALPHA);
@@ -158,6 +219,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			//next_n_val = nValueSellmeier(wavelength, AIR_B, AIR_C);
 			next_n_val = REFRACTIVE_INDEX_OF_AIR;
 		}
+
 		double n = current_n_val / next_n_val;
 		double cosI = -1 * hit_normal.Dot3(incoming_direction);
 		double sinT2 = n * n * (1.0 - cosI * cosI);
@@ -193,23 +255,31 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		//std::cout << "    rp: " << rp << std::endl;
 
 		//REFLECTION
-		if(refract_reflect_random < 0.8){
+		if(refract_reflect_random < reflectance){
 			Vec3f reflection_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit_normal) * hit_normal);
 			//TODO: double check that reflection always leads to the photon going into air
-			TracePhoton(bounce_location,reflection_direction,wavelength,iter, viz_color, current_n_val);
+			TracePhoton(bounce_location,reflection_direction,wavelength,iter, viz_color, hit.getMaterial(), current_n_val, single_photon);
 		}
 		// REFRACTION
-		if(refract_reflect_random >= 0.8){
-			TracePhoton(bounce_location,refraction_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), next_n_val);
+		if(refract_reflect_random >= reflectance){
+			TracePhoton(bounce_location,refraction_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), hit.getMaterial(), next_n_val, single_photon);
 		}
 
 	}
 	//Visualize photons even when they don't hit anything.
-	else if(DRAW_ESCAPING_PHOTONS){
-		Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit.getNormal()) * hit.getNormal());
-		//Ray bounce = Ray(bounce_location, bounce);
-		RayTree::AddGeneralSegment(ray, 0, NORMAL_VISUALIZATION_LENGTH * 5, Vec4f(0.0,0.0,0.0,1.0));
+	else {
+		if(DRAW_ESCAPING_PHOTONS){
+			Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit.getNormal()) * hit.getNormal());
+			//Ray bounce = Ray(bounce_location, bounce);
+			RayTree::AddGeneralSegment(ray, 0, NORMAL_VISUALIZATION_LENGTH * 5, Vec4f(0.0,0.0,0.0,1.0));
+		}
+		//This is a single photon escaping
+		if(single_photon){
+			printEscapingFacePhoton();
+			printOutputFile();
+		}
 	}
+
 		
 }
 
@@ -266,9 +336,12 @@ void PhotonMapping::TracePhotons() {
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
-			TracePhoton(start,direction,wavelength,0, photon_color, REFRACTIVE_INDEX_OF_AIR);
+			TracePhoton(start,direction,wavelength,0, photon_color, NULL, REFRACTIVE_INDEX_OF_AIR, false);
 		}
 	}
+
+	printEscapingFacePhoton();
+	printOutputFile();
 
 	RayTree::Deactivate();
 }
@@ -567,6 +640,8 @@ bool PhotonMapping::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches)
 		Face *f = mesh->getOriginalQuad(i);
 		bool backfacing_hit = false;
 		if (f->intersect(ray,h,args->intersect_backfacing, &backfacing_hit)){
+			//TODO: check this with Barb
+			//if we have a backfacing hit, the light is escaping via that face
 			answer = true;
 			h.setIsBackfacing(backfacing_hit);
 		}
@@ -592,5 +667,13 @@ bool PhotonMapping::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches)
 			}
 		}
 	}
+
+	//Commented out because I already do this in the Trace Photon Function
+	// Count the number of rays leaving the faces
+	//if(h.getIsBackfacing() && h.getFace() != NULL){
+	//	std::cout << "that happened" << std::endl;
+	//	h.getFace()->incrementNumRaysLeaving();
+	//}
+
 	return answer;
 }

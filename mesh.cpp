@@ -250,10 +250,20 @@ void Mesh::Load(const std::string &input_file, ArgParser *_args) {
 			std::vector<float> B;
 			std::vector<float> C;
 			std::string texture_file = "";
+			std::string mat_name = "unnamed";
 			Vec3f diffuse(0,0,0);
 			double r,g,b;
+			double absorbed_light = 0; // default no absorbed
 			float refractive_val = 1.0; //to hold Sellemier values
 			objfile >> token;
+			if (token == "name"){
+				objfile >> mat_name;
+				objfile >> token;
+			}
+			if (token == "absorbed") {
+				objfile >> absorbed_light;
+				objfile >> token;
+			}
 			if (token == "diffuse") {
 				objfile >> r >> g >> b;
 				diffuse = Vec3f(r,g,b);
@@ -275,21 +285,20 @@ void Mesh::Load(const std::string &input_file, ArgParser *_args) {
 				objfile >> token;
 			}
 			//store B values for refraction
-			if (token == "B"){
+			while (token == "B"){
 				objfile >> refractive_val;
 				B.push_back(refractive_val);
 				objfile >> token;
 			}
-			if (token == "C"){
+			while (token == "C"){
 				objfile >> refractive_val;
-				B.push_back(refractive_val);
+				C.push_back(refractive_val);
 				objfile >> token;
 			}
-			
 			assert (token == "emitted");
 			objfile >> r >> g >> b;
 			emitted = Vec3f(r,g,b);
-			materials.push_back(new Material(texture_file,diffuse,reflective,emitted,roughness,B,C));
+			materials.push_back(new Material(texture_file,diffuse,reflective,emitted,roughness,B,C, absorbed_light, mat_name));
 		} 
 		else {
 			std::cout << "UNKNOWN TOKEN " << token << std::endl;

@@ -7,7 +7,7 @@
 #include "photon.h"
 #include "vbo_structs.h"
 
-
+class Material;
 class Mesh;
 class ArgParser;
 class KDTree;
@@ -61,6 +61,9 @@ class PhotonMapping {
 	void drawVBOs();
 	void cleanupVBOs();
 
+	void printEscapingFacePhoton();
+	void printOutputFile();
+
 	// step 1: send the photons throughout the scene
 	void TracePhotons();
 	// step 2: collect the photons and return the contribution from indirect illumination
@@ -69,7 +72,7 @@ class PhotonMapping {
 	bool CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches) const;
 
 	// trace a single photon
-	void TracePhoton(const Vec3f &position, const Vec3f &direction, const float wavelength, int iter, Vec4f viz_color, float current_n_val);
+	void TracePhoton(const Vec3f &position, const Vec3f &direction, const float wavelength, int iter, Vec4f viz_color, Material* current_material, float current_n_val, bool single_photon);
 
  private:
 

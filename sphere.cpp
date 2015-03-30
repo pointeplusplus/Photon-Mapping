@@ -60,7 +60,7 @@ bool Sphere::intersect(const Ray &r, Hit &h) const {
 	//only root1 is in front
 	if(root1 >= eps && root2 < 0 && (h.getT() < eps || root1 < h.getT())) {
 //		if(root1 < h.get_t()){
-			h.set(root1, material, root1_normal);
+			h.set(root1, material, root1_normal,NULL);
 //		}
 		
 		return true;
@@ -68,7 +68,7 @@ bool Sphere::intersect(const Ray &r, Hit &h) const {
 	//only root2 is in front
 	if(root2 >= eps && root1 < 0 && (h.getT() < eps || root1 < h.getT())) {
 //		if(root2 < h.get_t()){
-			h.set(root2, material, root2_normal);
+			h.set(root2, material, root2_normal,NULL);
 //		}
 		
 		return true;
@@ -77,10 +77,10 @@ bool Sphere::intersect(const Ray &r, Hit &h) const {
 	if(root1 >= eps && root2 >= eps && (root1 < h.getT() || root2 < h.getT() || h.getT() < eps) ) {
 		if(root1 < root2 ){
 
-			h.set(root1, material, root1_normal);
+			h.set(root1, material, root1_normal,NULL);
 		}
 		else {
-			h.set(root2, material, root2_normal);
+			h.set(root2, material, root2_normal,NULL);
 		}
 
 		return true;

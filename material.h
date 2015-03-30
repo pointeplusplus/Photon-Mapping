@@ -21,7 +21,7 @@ class Material {
 public:
 
 	Material(const std::string &texture_file, const Vec3f &d_color,
-		 const Vec3f &r_color, const Vec3f &e_color, double roughness_, std::vector<float> B, std::vector<float> C) {
+		 const Vec3f &r_color, const Vec3f &e_color, double roughness_, std::vector<float> B, std::vector<float> C, double absorbed, std::string mat_name) {
 		textureFile = texture_file;
 		if (textureFile != "") {
 			image = new Image(textureFile);
@@ -38,6 +38,8 @@ public:
 		texture_id = 0;
 		refractive_B = B;
 		refractive_C = C;
+		light_absorbed = absorbed;
+		name = mat_name;
 	}
 	
 	~Material();
@@ -47,6 +49,8 @@ public:
 	const Vec3f getDiffuseColor(double s, double t) const;
 	const Vec3f& getReflectiveColor() const { return reflectiveColor; }
 	const Vec3f& getEmittedColor() const { return emittedColor; }	
+	const std::string& getName() const { return name; }
+	double getAbsorbed() const { return light_absorbed; }
 	double getRoughness() const { return roughness; } 
 	bool hasTextureMap() const { return (textureFile != ""); } 
 	GLuint getTextureID();
@@ -77,7 +81,10 @@ protected:
 	Vec3f emittedColor;
 	std::vector<float> refractive_B;
 	std::vector<float> refractive_C;
+	double light_absorbed;
 	double roughness;
+	std::string name; 
+
 
 	std::string textureFile;
 	GLuint texture_id;

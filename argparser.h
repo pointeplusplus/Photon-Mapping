@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cassert>
+#include <sstream>
 #include "vectors.h"
 
 // VISUALIZATION MODES FOR RADIOSITY
@@ -31,6 +32,10 @@ public:
 				i++; assert (i < argc); 
 				input_file = argv[i];
 			} 
+			else if (!strcmp(argv[i],"-output") || !strcmp(argv[i],"-o")){
+				i++; assert (i < argc); 
+				output_file = argv[i];
+			}
 			else if (!strcmp(argv[i],"-size")) {
 				i++; assert (i < argc); 
 				width = atoi(argv[i]);
@@ -104,8 +109,14 @@ public:
 				Usage(argv[0]);
 			}
 		}
-		if (input_file == NULL) {
+		if (input_file == "") {
 			Usage(argv[0]);
+		}
+		else{
+			std::stringstream file_name;
+			file_name << input_file.substr(0,input_file.size()-4) << "_" << num_photons_to_shoot << ".txt";
+			output_file = file_name.str();
+			std::cout << "output file name is in default values " << output_file << std::endl;
 		}
 	}
 
@@ -129,7 +140,7 @@ public:
 	
 	void DefaultValues() {
 		// BASIC RENDERING PARAMETERS
-		input_file = NULL;
+		//input file is now an std::string
 		width = 400;
 		height = 400;
 		raytracing_animation = false;
@@ -168,7 +179,8 @@ public:
 	// all public! (no accessors)
 
 	// BASIC RENDERING PARAMETERS
-	char *input_file;
+	std::string input_file;
+	std::string output_file;
 	int width;
 	int height;
 	bool raytracing_animation;
