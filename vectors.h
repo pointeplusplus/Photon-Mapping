@@ -82,13 +82,23 @@ public:
 
 	
 	//Rebecca added
-	//in degrees
-	float AngleBetween(const Vec3f& other_vec){
-
-		return ((this->x() * other_vec.x()) + 
+	float AngleBetweenRadians(const Vec3f& other_vec){
+/*
+		std::cout << "Angle in radians is: " << acos(((this->x() * other_vec.x()) + 
 			(this->y() * other_vec.y()) + 
 			(this->z() * other_vec.z())) /
-			(this->Length() * other_vec.Length()); 
+			(this->Length() * other_vec.Length())) << std::endl;
+*/
+
+		return acos(((this->x() * other_vec.x()) + 
+			(this->y() * other_vec.y()) + 
+			(this->z() * other_vec.z())) /
+			(this->Length() * other_vec.Length())); 
+	}
+
+	float AngleBetweenDegrees(const Vec3f& other_vec){
+
+		return 180 / M_PI * AngleBetweenRadians(other_vec);
 	}
 
 	// ---------------------

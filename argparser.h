@@ -114,7 +114,7 @@ public:
 		}
 		else{
 			std::stringstream file_name;
-			file_name << input_file.substr(0,input_file.size()-4) << "_" << num_photons_to_shoot << ".txt";
+			file_name << input_file.substr(0,input_file.size()-4) << "_" << num_photons_to_shoot  << "_" << num_bounces << ".txt";
 			output_file = file_name.str();
 			std::cout << "output file name is in default values " << output_file << std::endl;
 		}
@@ -207,8 +207,8 @@ public:
 	bool stratified_antialiasing; //Rebecca added 
 
 	// PHOTON MAPPING PARAMETERS
-	int num_photons_to_shoot;
-	int num_photons_to_collect;
+	unsigned int num_photons_to_shoot;
+	unsigned int num_photons_to_collect;
 	bool render_photons;
 	bool render_kdtree;
 	bool gather_indirect;

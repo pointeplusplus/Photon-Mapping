@@ -121,7 +121,7 @@ triangles = []
 #all original and new quads
 quads = []
 
-file_name = 'diamond_3_converter.obj'
+file_name = raw_input("")
 file_stream = open(file_name)
 file_contents = file_stream.read()
 lines = file_contents.split('\n')

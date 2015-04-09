@@ -23,28 +23,21 @@
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
 #define DIRECTED_LIGHT false
-#define DRAW_PHOTON_PATHS true
+#define DRAW_PHOTON_PATHS false
 #define DRAW_COLORED_NORMALS true
 #define DRAW_ESCAPING_PHOTONS false
+#define NUM_BOUNCE_VIZ false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
-#define PI 3.14159265			
-
-using std::vector;
-
-//std::vector<float> DIAMOND_B = {0.3306, 4.3356};
-//std::vector<float> DIAMOND_C = {175, 106};
-//std::vector<float> AIR_B = {};
-//std::vector<float> AIR_C = {};
-
-
+#define PI 3.14159265	
+#define eps 0.001		
 
 Vec3f wavelengthToRGB(double wavelength);
 const Vec3f& mixColors(std::vector<Photon> wavelengths);
 
 //TODO: change wavelength?
-float nValueSellmeier(float wavelength, vector<float> B, vector<float> C){
+float nValueSellmeier(float wavelength, std::vector<float> B, std::vector<float> C){
 
 	//std::cout << "In Sellmeier" << std::endl;
 	//std::cout << "    B and C length: " << B.size() << " " << C.size() << std::endl;
@@ -77,6 +70,7 @@ PhotonMapping::~PhotonMapping() {
 }
 
 void PhotonMapping::printEscapingFacePhoton(){
+	/*
 	//After all of the photons have been traced, print the light escaping each face
 	std::cout << "Number of rays leaving faces:" << std::endl;
 	Face* face;
@@ -85,27 +79,70 @@ void PhotonMapping::printEscapingFacePhoton(){
 		std::cout << "    " << f << ": " << face->getNumRaysLeavingFace() << "   ";
 	}
 	std::cout << "filename: " << args->output_file << std::endl; 
+	*/
+
+	int total_interior_bounces = 0;
+	int total_rays_reflected = 0; 
+	int total_rays_entering = 0;
+	int total_rays_leaving = 0;	
+	Face* face;
+
+	for (int f = 0; f < mesh->numFaces(); f++){
+
+		face = mesh->getFace(f);
+		//Summing 
+		if(face->getMaterial()->getName() == "diamond"){
+			total_interior_bounces += face->getNumInteriorBounces();
+			total_rays_reflected += face->getNumRaysReflected(); 
+			total_rays_entering += face->getNumRaysEnteringFace();
+			total_rays_leaving += face->getNumRaysLeavingFace();
+		}
+	}
+	std::cout << total_interior_bounces << " " << total_rays_reflected << " " << total_rays_entering << " " << total_rays_leaving << std::endl;	
 }
 
 void PhotonMapping::printOutputFile(){
+	
+	//summming variables
+	int total_interior_bounces = 0;
+	int total_rays_reflected = 0; 
+	int total_rays_entering = 0;
+	int total_rays_leaving = 0;	
+
 	std::ofstream output(args->output_file.c_str());
+
 	std::cout << "outputfile " << args->output_file.c_str() << std::endl;
 	output << "Photons shot: " << args->num_photons_to_shoot << std::endl;
 	output << "Input file: " << args->input_file << std::endl;
 	output << "Number of bounces: " << args->num_bounces << std::endl;
 	output << "Number of shadow samples: " << args->num_shadow_samples << std::endl;
 	Face* face;
-	output << "Face_Number Face_Material Normal Area Rays_Entering_Face Rays_Leaving_Face" << std::endl;
+	output << "Face_Number Face_Material Normal Area Internal_Bounce Reflected_Rays Rays_Entering_Face Rays_Leaving_Face" << std::endl;
 	for (int f = 0; f < mesh->numFaces(); f++){
+
 		face = mesh->getFace(f);
+
+		//Summing 
+		if(face->getMaterial()->getName() == "diamond"){
+			total_interior_bounces += face->getNumInteriorBounces();
+			total_rays_reflected += face->getNumRaysReflected(); 
+			total_rays_entering += face->getNumRaysEnteringFace();
+			total_rays_leaving += face->getNumRaysLeavingFace();
+		}
+			
+		//Printing 
 		Vec3f normal = face->computeNormal();
 		output << f << ": " 
 			<< face->getMaterial()->getName() << " "
 			<< "{" << normal.x() << "," << normal.y() << "," << normal.z() << "} "
 			<< face->getArea() << " "
+			<< face->getNumInteriorBounces() << " "
+			<< face->getNumRaysReflected() << " "
 			<< face->getNumRaysEnteringFace() << " "
 			<< face->getNumRaysLeavingFace() << std::endl;
 	}
+
+	output << total_interior_bounces << " " << total_rays_reflected << " " << total_rays_entering << " " << total_rays_leaving << std::endl;
 }
 
 // ========================================================================
@@ -113,6 +150,8 @@ void PhotonMapping::printOutputFile(){
 
 void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction, 
 				const float wavelength, int iter, Vec4f viz_color, Material* current_material, float current_n_val, bool single_photon) {
+
+	//std::cout << "Iter for this photon: " << iter << std::endl;
 
 	// NOTE: current_material can == NULL 
 	// TODO: something else with this vector other than making it again every iteration
@@ -128,7 +167,6 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	//Add this photon to thee kd tree
 	Photon* this_iteration_photon = new Photon(position, direction, wavelength, iter);
 
-	// kdtree is false during the t-press situation
 	if(kdtree){
 		kdtree->AddPhoton(*this_iteration_photon);
 	}
@@ -150,27 +188,10 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	
 	Hit hit;
 	
+
 	//find the next thing or the photon to bounce off of
 	if(CastRay(ray, hit, false)){
-
 		Vec3f hit_normal = hit.getNormal();
-		if(hit.getIsBackfacing()){
-			hit_normal = -1 * hit_normal;
-
-			//if the hit is back, light is escaping out of this face
-			if(hit.getFace() != NULL){
-				hit.getFace()->incrementNumRaysLeaving();
-			}
-
-		}
-		else{
-
-			//if the hit is not back, light is entering this face
-			if(hit.getFace() != NULL){
-				hit.getFace()->incrementNumRaysEntering();
-			}
-
-		}
 
 		Material* material = hit.getMaterial();
 		Vec3f bounce_location = ray.getOrigin() + (hit.getT() * ray.getDirection());
@@ -188,7 +209,12 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
  			Vec4f photon_color_with_alpha = Vec4f(photon_color[0], photon_color[1], photon_color[2], PHOTON_VISUALIZATION_ALPHA);
 
 			if(DRAW_PHOTON_PATHS){
-				RayTree::AddGeneralSegment(ray,0,hit.getT(), photon_color_with_alpha);
+				if(NUM_BOUNCE_VIZ){
+					RayTree::AddGeneralSegment(ray,0,hit.getT(), viz_color);
+				}
+				else{
+					RayTree::AddGeneralSegment(ray,0,hit.getT(), photon_color_with_alpha);
+				}
 			}
 			//Normal of the hit (white and fully opaque) -- make the time constant just to draw a line
 			Ray hit_normal_ray = Ray(bounce_location, hit_normal);
@@ -204,14 +230,17 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		viz_color = colors[iter%colors.size()];
 		iter++;
 
-		float refract_reflect_random = GLOBAL_mtrand.rand();
+		if(hit.getIsBackfacing()){
+			hit_normal = -1 * hit_normal;
+		}
+
 		//Reflectence for s and p polarized light respectively
 		float rs = 0;
 		float rp = 0;
 		Vec3f refraction_direction = Vec3f(0,0,0); // Will be assigned later
 		//Refraction calculations for Frensel equations
 		Vec3f incoming_direction = ray.getDirection();
-		float incoming_angle_with_surface = hit_normal.AngleBetween(-1 * incoming_direction);
+		float incoming_angle_with_surface = hit_normal.AngleBetweenRadians(-1 * incoming_direction);
 
 		//TODO: fix next_n_val
 		float next_n_val = nValueSellmeier(wavelength, material->getRefractiveB(), material->getRefractiveC());
@@ -220,17 +249,23 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			//next_n_val = nValueSellmeier(wavelength, AIR_B, AIR_C);
 			next_n_val = REFRACTIVE_INDEX_OF_AIR;
 		}
-
 		double n = current_n_val / next_n_val;
 		double cosI = -1 * hit_normal.Dot3(incoming_direction);
 		double sinT2 = n * n * (1.0 - cosI * cosI);
 		if(sinT2 <= 1.0){
 			double cosT = sqrt(1.0 - sinT2);
 			refraction_direction = n * incoming_direction + (n * cosI - cosT) * hit_normal;
-			float outgoing_angle_with_surface = refraction_direction.AngleBetween(-1 * hit_normal);
+			float outgoing_angle_with_surface = refraction_direction.AngleBetweenRadians(-1 * hit_normal);
 			//TODO: if we are leaving the material, send the refractive index of air instead of the material's refractive index
 			//	to do this, check angle of the normal and the hit
-
+			/*
+			if(hit.getMaterial()->getName() == "diamond"){
+				std::cout << "    Incoming angle: " << incoming_angle_with_surface << std::endl;
+				std::cout << "    Outgoing angle: " << outgoing_angle_with_surface << std::endl;
+				std::cout << "    Current N val: " << current_n_val << std::endl;
+				std::cout << "    Next N val: "  << next_n_val << std::endl;
+			}
+			*/
 			float rs_numerator = (current_n_val * cos(incoming_angle_with_surface)) - (next_n_val * cos(outgoing_angle_with_surface));
 			float rs_denominator = (current_n_val * cos(incoming_angle_with_surface)) + (next_n_val * cos(outgoing_angle_with_surface));
 			rs = pow(rs_numerator/rs_denominator, 2);
@@ -247,22 +282,79 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 
 		//For unpolarized light, as I am assuming my light source is
 		float reflectance = (rs + rp) / 2.0;
-		assert(reflectance >= 0 && reflectance <= 1);
+		/*
+		if(hit.getMaterial()->getName() == "diamond"){
+			std::cout << "    Reflectence: " << reflectance << std::endl;
+			std::cout << "    rs: " << rs << std::endl;
+			std::cout << "    rp: " << rp << std::endl;
+		}
+		*/
+		if(hit.getFace() != NULL)
+			assert(reflectance >= 0-eps && reflectance <= 1+eps);
 
-
-		//TODO: remove the printing -- it is for testing purposes only
-		//std::cout << "Reflectence: " << reflectance << std::endl;
-		//std::cout << "    rs: " << rs << std::endl;
-		//std::cout << "    rp: " << rp << std::endl;
-
-		//REFLECTION
+		//Determine if it is reflection or refraction
+		bool reflection = false;
+		float refract_reflect_random = GLOBAL_mtrand.rand();
 		if(refract_reflect_random < reflectance){
+			reflection = true;
+		}
+		
+		
+		//REFLECTION
+		if(reflection){
 			Vec3f reflection_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit_normal) * hit_normal);
 			//TODO: double check that reflection always leads to the photon going into air
+			//std::cout << "Iter " << iter << ": " << hit.getIsBackfacing() << " " << reflection_direction.AngleBetweenRadians(hit_normal) << std::endl << "    ";
+			//printEscapingFacePhoton();
+			//Count hits from the back (espcaping and interior bounces)
+			
+			if(hit.getFace() != NULL){	//for primitives
+				if(hit.getIsBackfacing()){
+					if(reflection_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
+						hit.getFace()->incrementNumRaysLeaving();
+					}
+					else{
+						hit.getFace()->incrementNumInteriorBounces();
+					}
+				}
+				else{
+					if(reflection_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
+						hit.getFace()->incrementNumRaysEntering();
+					}
+					else{
+						hit.getFace()->incrementNumRaysReflected();
+					}
+				}
+			}
 			TracePhoton(bounce_location,reflection_direction,wavelength,iter, viz_color, hit.getMaterial(), current_n_val, single_photon);
 		}
 		// REFRACTION
-		if(refract_reflect_random >= reflectance){
+		else{
+
+			//std::cout << "Iter " << iter << ": " << hit.getIsBackfacing() << " " << refraction_direction.AngleBetweenRadians(hit_normal) << std::endl << "    ";
+			//printEscapingFacePhoton();
+			//Count hits from the front (entering and reflecting bounces)
+
+			if(hit.getFace() != NULL){
+				if(hit.getIsBackfacing()){
+
+					if(refraction_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
+						hit.getFace()->incrementNumRaysLeaving();
+					}
+					else{
+						hit.getFace()->incrementNumInteriorBounces();
+					}
+				}
+				else{
+
+					if(refraction_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
+						hit.getFace()->incrementNumRaysEntering();
+					}
+					else{
+						hit.getFace()->incrementNumRaysReflected();
+					}
+				}
+			}
 			TracePhoton(bounce_location,refraction_direction,wavelength,iter, Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA), hit.getMaterial(), next_n_val, single_photon);
 		}
 
@@ -270,7 +362,6 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	//Visualize photons even when they don't hit anything.
 	else {
 		if(DRAW_ESCAPING_PHOTONS){
-			Vec3f bounce_direction = ray.getDirection() - 2.0* (ray.getDirection().Dot3(hit.getNormal()) * hit.getNormal());
 			//Ray bounce = Ray(bounce_location, bounce);
 			RayTree::AddGeneralSegment(ray, 0, NORMAL_VISUALIZATION_LENGTH * 5, Vec4f(0.0,0.0,0.0,1.0));
 		}
@@ -360,9 +451,9 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	}
 
 	double i = .001;
-	vector<Photon> closest;
-	vector<Photon> distance;
-	vector<double> radii;
+	std::vector<Photon> closest;
+	std::vector<Photon> distance;
+	std::vector<double> radii;
 	//std::cout << "Collecting Photons for point: " << point << std::endl;
 	while(distance.size() < args->num_photons_to_collect){
 		//std::cout << "Round " << i << " and " << closest.size() << " photons found." << std::endl;
@@ -373,7 +464,7 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 		BoundingBox bb = BoundingBox(bb2,bb1);
 		kdtree->CollectPhotonsInBox(bb, closest);
 
-		for(int j = 0; j < closest.size(); j++){
+		for(unsigned int j = 0; j < closest.size(); j++){
 			Photon tmp = closest[j];
 			tmp.setPosition(Vec3f(tmp.getPosition().x() - point.x(), tmp.getPosition().y() - point.y(), tmp.getPosition().z() - point.z()));
 			distance.push_back(tmp);

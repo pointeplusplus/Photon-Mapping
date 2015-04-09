@@ -23,6 +23,8 @@ public:
 		material = m;
 		num_rays_leaving_face = 0;	
 		num_rays_entering_face = 0;	 
+		num_interior_bounces = 0;
+		num_rays_reflected = 0;
 	}
 
 	// =========
@@ -54,6 +56,8 @@ public:
 	Vec3f computeNormal() const;
 	int getNumRaysLeavingFace() const { return num_rays_leaving_face; }
 	int getNumRaysEnteringFace() const {return num_rays_entering_face; }
+	int getNumInteriorBounces() const {return num_interior_bounces; }
+	int getNumRaysReflected() const {return num_rays_reflected; }
 
 	// =========
 	// MODIFIERS
@@ -69,6 +73,16 @@ public:
 	void incrementNumRaysEntering(){ 
 		num_rays_entering_face++;
 	}
+
+	void incrementNumInteriorBounces(){ 
+		num_interior_bounces++;
+	}
+
+	void incrementNumRaysReflected(){
+		num_rays_reflected++;
+	}
+
+
  
 	// ==========
 	// RAYTRACING
@@ -101,6 +115,8 @@ protected:
 	//Rebecca Added
 	int num_rays_leaving_face;
 	int num_rays_entering_face;
+	int num_interior_bounces;
+	int num_rays_reflected;
 };
 
 // ===========================================================
