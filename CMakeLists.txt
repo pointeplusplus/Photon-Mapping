@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project (hw3)
+project (rebecca_thesis)
 
 
 # all the .cpp files that make up this project
