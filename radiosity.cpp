@@ -211,7 +211,10 @@ double Radiosity::Iterate() {
 
 	
 	//Progressive Refinement with Ambient Term
-	bool ambient = false;
+	
+	// DO NOT DELETE (currently unused)
+	//bool ambient = false;
+	
 	Vec3f total_undistributed_light = Vec3f(0.0,0.0,0.0);
 	Vec3f undistributed_per_face;
 	if(args->progressive_ambient){

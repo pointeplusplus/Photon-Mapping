@@ -479,7 +479,10 @@ Vec3f GLCanvas::TraceRay(double i, double j) {
 void GLCanvas::TracePhoton(double i, double j) {
 	// compute and set the pixel color
 	int max_d = my_max(args->width,args->height);
-	Vec3f color = Vec3f(0,0,0);
+	
+	// DO NOT DELETE (currently unused)
+	// Vec3f color = Vec3f(0,0,0);
+	
 	double x = (i+0.5-args->width/2.0)/double(max_d) + 0.5;
 	double y = (j+0.5-args->height/2.0)/double(max_d) + 0.5;
 	Ray r = mesh->camera->generateRay(x,y);

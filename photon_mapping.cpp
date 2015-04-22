@@ -34,7 +34,7 @@
 #define eps 0.001		
 
 Vec3f wavelengthToRGB(double wavelength);
-const Vec3f& mixColors(std::vector<Photon> wavelengths);
+Vec3f mixColors(const std::vector<Photon> & wavelengths);
 
 //TODO: change wavelength?
 float nValueSellmeier(float wavelength, std::vector<float> B, std::vector<float> C){
