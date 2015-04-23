@@ -30,11 +30,11 @@
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
-#define PI 3.14159265
+#define PI 3.14159265	
 #define eps 0.001		
 
 Vec3f wavelengthToRGB(double wavelength);
-Vec3f mixColors(const std::vector<Photon> & wavelengths);
+const Vec3f& mixColors(std::vector<Photon> wavelengths);
 
 //TODO: change wavelength?
 float nValueSellmeier(float wavelength, std::vector<float> B, std::vector<float> C){
@@ -442,29 +442,26 @@ void PhotonMapping::TracePhotons() {
 // During ray tracing, when a diffuse (or partially diffuse) object is
 // hit, gather the nearby photons to approximate indirect illumination
 
-Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, const Vec3f &direction_from) {
+Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, const Vec3f &direction_from) const {
+
 
 	if (kdtree == NULL) { 
 		std::cout << "WARNING: Photons have not been traced throughout the scene." << std::endl;
 		return Vec3f(0,0,0); 
 	}
 
-	double radius = last_radius;
-	
+	double i = .001;
 	std::vector<Photon> closest;
 	std::vector<Photon> distance;
-	
-	// Ununsed (not sure why it was there)
-	//std::vector<double> radii;
-	int i = 1;
+	std::vector<double> radii;
 	//std::cout << "Collecting Photons for point: " << point << std::endl;
 	while(distance.size() < args->num_photons_to_collect){
-		//std::cout << "Round " << i << ", radius = " << radius;
-		
+		std::cout << "Round " << i << " and " << closest.size() 
+				<< " photons found." << std::endl;
 		closest.clear();
 		distance.clear();
-		Vec3f bb1 = Vec3f(point.x() + radius, point.y() + radius, point.z() + radius);
-		Vec3f bb2 = Vec3f(point.x() - radius, point.y() - radius, point.z() - radius);
+		Vec3f bb1 = Vec3f(point.x() + i, point.y() + i, point.z() + i);
+		Vec3f bb2 = Vec3f(point.x() - i, point.y() - i, point.z() - i);
 		BoundingBox bb = BoundingBox(bb2,bb1);
 		kdtree->CollectPhotonsInBox(bb, closest);
 
@@ -483,39 +480,19 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 		{
 			distance.pop_back();
 		}
-		
-		//std::cout << " and " << closest.size() << " photons found.\n";
-		
-		// Update radius
-		if(radius > 0) 
-		{
-			radius *=2;
-		}
-		else 
-		{
-			radius = args->default_radius;
-		}
-		++i;
+		i *= 2;
 	}
-	
 	while(distance.size() > args->num_photons_to_collect){
 		distance.pop_back();
 	}
 	if(distance.size() == 0)
 		return Vec3f(0,0,0);
 	
-	radius = distance.back().getPosition().Length();
-	
-	// Update last radius for next iteration
-	last_radius = 1.15 * radius;
-	
-	// Compute color
+	double area = PI * pow(distance[distance.size() - 1].getPosition().Length(), 2.0);
 	Vec3f color = mixColors(distance);
-
-	double area = PI * pow(radius, 2.0);
 	color.Scale(1/(area * distance.size()));
 	color.Scale(distance.size()/args->num_photons_to_collect);
-	//std::cout << "\n";
+	std::cout << "\n";
 	return color;
 	
 }

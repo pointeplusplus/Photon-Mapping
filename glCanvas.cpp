@@ -598,7 +598,10 @@ void GLCanvas::idle() {
 		glBegin(GL_POINTS);
 		for (int i = 0; i < 400; i++) {
 			if (!DrawPixel()) {
-	args->raytracing_animation = false;
+				args->raytracing_animation = false;
+				
+				//TODO: remove this
+				//exit(0);
 	break;
 			}
 		}
