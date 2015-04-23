@@ -35,6 +35,9 @@ int GLCanvas::raytracing_x;
 int GLCanvas::raytracing_y;
 int GLCanvas::raytracing_skip;
 
+// For timing animation
+time_t GLCanvas::rendering_time;
+
 // ========================================================
 // Initialize all appropriate OpenGL variables, set
 // callback functions, and start the main event loop.
@@ -251,6 +254,9 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		args->gather_indirect=false;
 		args->raytracing_animation = !args->raytracing_animation;
 		if (args->raytracing_animation) {
+			// time the animation
+			rendering_time = time(NULL);
+			
 			raytracing_skip = my_max(args->width,args->height) / 10;
 			if (raytracing_skip % 2 == 0) raytracing_skip++;
 			assert (raytracing_skip >= 1);
@@ -258,8 +264,13 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 			raytracing_y = raytracing_skip/2;
 			display(); // clear out any old rendering
 			printf ("raytracing animation started, press 'R' to stop\n");
-		} else
+		} else {
 			printf ("raytracing animation stopped, press 'R' to start\n");		
+			// Print time to render
+			rendering_time =  time(NULL) - rendering_time;
+			std::cout << "Rendering completed in " << rendering_time 
+					<< " seconds." << std::endl;
+		}
 		break;
 	case 't':	case 'T': {
 		// visualize the ray tree for the pixel at the current mouse position
@@ -307,6 +318,9 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		args->gather_indirect = true;
 		args->raytracing_animation = !args->raytracing_animation;
 		if (args->raytracing_animation) {
+			// time the animation
+			rendering_time = time(NULL);
+			
 			raytracing_skip = 1;//my_max(args->width,args->height) / 10;
 			if (raytracing_skip % 2 == 0) raytracing_skip++;
 			assert (raytracing_skip >= 1);
@@ -314,8 +328,13 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 			raytracing_y = raytracing_skip/2;
 			display(); // clear out any old rendering
 			printf ("photon mapping animation started, press 'G' to stop\n");
-		} else
+		} else {
 			printf ("photon mapping animation stopped, press 'G' to start\n");		
+			// Print time to render
+			rendering_time =  time(NULL) - rendering_time;
+			std::cout << "Rendering completed in " << rendering_time 
+					<< " seconds." << std::endl;
+		}
 		break; 
 	}
 		
@@ -549,7 +568,14 @@ int GLCanvas::DrawPixel() {
 		raytracing_y += raytracing_skip;
 	}
 	if (raytracing_y > args->height) {
-		if (raytracing_skip == 1) return 0;
+		if (raytracing_skip == 1)
+		{
+			// stop rendering, matches resolution of current camera
+			rendering_time =  time(NULL) - rendering_time;
+			std::cout << "Rendering completed in " << rendering_time 
+					<< " seconds." << std::endl;
+			return 0;
+		}
 		raytracing_skip = raytracing_skip / 2;
 		if (raytracing_skip % 2 == 0) raytracing_skip++;
 		assert (raytracing_skip >= 1);

@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <string>
 
 // Included files for OpenGL Rendering
@@ -56,6 +57,9 @@ private:
   static Radiosity *radiosity;
   static PhotonMapping *photon_mapping;
 
+	// For timing rendering
+	static time_t rendering_time;
+  
   // state of the mouse cursor
   static int mouseButton;
   static int mouseX;
