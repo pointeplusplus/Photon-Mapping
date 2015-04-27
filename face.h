@@ -50,6 +50,7 @@ public:
 	}
 	Material* getMaterial() const { return material; }
 	double getArea() const;
+
 	Vec3f RandomPoint() const;
 	//Rebecca defined
 	Vec3f RandomStratifiedPoint(int x_iter, int y_iter, int num_samples) const;
@@ -81,6 +82,11 @@ public:
 	void incrementNumRaysReflected(){
 		num_rays_reflected++;
 	}
+
+	//Debug Functions
+	bool isConvex() const;
+	void printVertices() const;
+	double shortestEdge() const;
 
 
  
