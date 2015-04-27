@@ -26,7 +26,7 @@
 #define DRAW_PHOTON_PATHS false
 #define DRAW_FIRST_BOUNCE false
 #define DRAW_COLORED_NORMALS true
-#define DRAW_ESCAPING_PHOTONS true
+#define DRAW_ESCAPING_PHOTONS false
 #define NUM_BOUNCE_VIZ false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
@@ -35,7 +35,7 @@
 #define eps 0.001		
 
 Vec3f wavelengthToRGB(double wavelength);
-Vec3f mixColors(const std::vector<Photon> & wavelengths);
+Vec3f mixColors(const std::vector<std::pair<Photon, float> > & wavelengths);
 
 //TODO: change wavelength?
 float nValueSellmeier(float wavelength, std::vector<float> B, std::vector<float> C){
@@ -450,6 +450,16 @@ void PhotonMapping::TracePhotons() {
 	RayTree::Deactivate();
 }
 
+// Returns true if the point is contained within the sphere
+bool inSphere(const Vec3f & center, float radius_squared, const Vec3f & point)
+{
+	float x = center.x() - point.x();
+	float y = center.y() - point.y();
+	float z = center.z() - point.z();
+	return ((x* x) + (y* y) + (z * z)) < radius_squared;
+}
+
+
 // ======================================================================
 // During ray tracing, when a diffuse (or partially diffuse) object is
 // hit, gather the nearby photons to approximate indirect illumination
@@ -460,7 +470,8 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 		std::cout << "WARNING: Photons have not been traced throughout the scene." << std::endl;
 		return Vec3f(0,0,0); 
 	}
-
+	
+	/*
 	double radius = last_radius;
 	
 	std::vector<Photon> closest;
@@ -529,7 +540,103 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	color.Scale(distance.size()/args->num_photons_to_collect);
 	//std::cout << "\n";
 	return color;
+	*/
 	
+	
+	int num_photons_to_collect = args->num_photons_to_collect;
+	float radius = last_radius;
+	float radius_squared = radius * radius;
+	std::vector<Photon> photons;
+	photons.reserve(num_photons_to_collect);
+	std::vector<std::pair<Photon, float> > kept_photons;
+	kept_photons.reserve(num_photons_to_collect);
+
+	while (1)
+	{
+		// construct the bounding box
+		Vec3f min(point.x() - radius, point.y() - radius, point.z() - radius);
+		Vec3f max(point.x() + radius, point.y() + radius, point.z() + radius);
+		BoundingBox bb(min, max);
+		
+		// Collect the photons
+		kdtree->CollectPhotonsInBox(bb, photons);
+
+
+		//std::cout << "Collected " << photons.size() << " photons\n";
+
+		//std::cout << "Bounding box is from " << min << " to " << max << "\n";
+
+		// Throw out the photons not inside the sphere
+		for (unsigned int i = 0; i < photons.size();++i)
+		{
+			//std::cout << "Photon " << itr->getPosition();
+			if (inSphere(point, radius_squared, (photons[i]).getPosition()))
+			{
+				//std::cout << " is outside the sphere.\n";
+				//photons.erase(photons.begin() + i);
+				
+				// Pre-compute distance for use with sorting
+				float dist = (photons[i].getPosition() - point).Length();
+				kept_photons.push_back(std::make_pair(photons[i], dist));
+			}
+			// TODO: throw out wrong direction photons
+		}
+
+		//std::cout << "Kept " << kept_photons.size() << " photons\n";
+	
+		// If we don't have enough photons, double the radius and try again. 
+		// Otherwise, break out and proceed to the next part.
+		if (kept_photons.size() < num_photons_to_collect)
+		{
+			radius *= 2;
+			radius_squared = radius * radius;
+			photons.clear();
+			kept_photons.clear();
+		}
+		else
+		{
+			break;
+		}
+
+	}
+	
+	//std::cout << "The wide radius is " << radius << "\n";
+
+	assert(kept_photons.size() >= num_photons_to_collect);
+
+	// Sort the photons by their distance from the point
+	std::sort(kept_photons.begin(), kept_photons.end(), [&point](const std::pair<Photon, float> & a, const std::pair<Photon, float> & b) -> bool{
+		return a.second < b.second;
+	});
+
+	// Drop the extra photons - we don't need them
+	// taking this out
+	kept_photons.resize(num_photons_to_collect);
+
+
+	//std::cout << "After dropping, now have " << kept_photons.size() << " photons\n";
+
+	// Find out the radius actually required to capture these photons by
+	// taking length of the farthest photon from our point.
+	radius = (kept_photons.back().first.getPosition() - point).Length();
+
+	//std::cout << "The actual radius is " << radius << "\n";
+
+	// Update the "last radius" for the next call to this function. Slightly
+	// overestimate, since it's better to sort a few more photons than get more
+	// from the KD tree.
+	last_radius = 1.15 * radius;
+
+	// Compute color
+	Vec3f color = mixColors(kept_photons);
+
+	double area = PI * radius * radius;
+	color.Scale(1/(area));
+	// color.Scale(1/(area* kept_photons.size()));
+	
+	//color.Scale(kept_photons.size()/args->num_photons_to_collect);
+	//std::cout << "\n";
+	return color;
 }
 
 

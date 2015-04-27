@@ -9,7 +9,8 @@
 
 class Photon {
  public:
-
+	Photon() {}
+	
 	// CONSTRUCTOR
 	Photon(const Vec3f &p, const Vec3f &d, const float &w, int b) :
 		position(p),direction_from(d),bounce(b),wavelength(w){}
