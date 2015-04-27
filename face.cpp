@@ -2,6 +2,9 @@
 #include "matrix.h"
 #include "utils.h"
 
+#include <cmath>
+#include <cassert>
+
 // =========================================================================
 // =========================================================================
 
@@ -161,12 +164,115 @@ inline Vec3f ComputeNormal(const Vec3f &p1, const Vec3f &p2, const Vec3f &p3) {
 	return normal;
 }
 
+bool isLinear(const Vec3f &p1, const Vec3f &p2, const Vec3f &p3){
+
+	double triangle_area = AreaOfTriangle(DistanceBetweenTwoPoints(p1,p2),
+											DistanceBetweenTwoPoints(p1, p3),
+											DistanceBetweenTwoPoints(p2,p3));
+
+	//Non-zero triangle area means that the points are not colinear
+	if(triangle_area > EPSILON){
+		return false;
+	}
+	return true;
+}
+
 Vec3f Face::computeNormal() const {
 	// note: this face might be non-planar, so average the two triangle normals
 	Vec3f a = (*this)[0]->get();
 	Vec3f b = (*this)[1]->get();
 	Vec3f c = (*this)[2]->get();
 	Vec3f d = (*this)[3]->get();
+
+	//Checks to make sure we don't have three points that we are using here to check the normal be linear -- that could cause errors!! 
+	if(isLinear(a,b,c)){
+		return ComputeNormal(a,c,d);
+	}
+	if(isLinear(a,c,d)){
+		return ComputeNormal(a,b,c);
+	}
 	return 0.5 * (ComputeNormal(a,b,c) + ComputeNormal(a,c,d));
 }
 
+bool Face::isConvex() const {
+
+	Vec3f a = (*this)[0]->get();
+	Vec3f b = (*this)[1]->get();
+	Vec3f c = (*this)[2]->get();
+	Vec3f d = (*this)[3]->get();
+
+	// no D
+	double t1 = AreaOfTriangle(DistanceBetweenTwoPoints(a,b),
+									 DistanceBetweenTwoPoints(a,c),
+									 DistanceBetweenTwoPoints(b,c));
+
+	// no B
+	double t2 = AreaOfTriangle(DistanceBetweenTwoPoints(a,c),
+									 DistanceBetweenTwoPoints(a,d),
+									 DistanceBetweenTwoPoints(c,d));
+
+	// no C
+	double t3 = AreaOfTriangle(DistanceBetweenTwoPoints(a,d),
+									 DistanceBetweenTwoPoints(a,b),
+									 DistanceBetweenTwoPoints(b,d));
+
+	// no A
+	double t4 = AreaOfTriangle(DistanceBetweenTwoPoints(c,d),
+									 DistanceBetweenTwoPoints(b,d),
+									 DistanceBetweenTwoPoints(b,c));
+	
+
+	
+
+	if (!fabs((t1+t2)-(t3+t4) < .001)){
+		std::cout << "        t1: " << t1 << std::endl;
+		std::cout << "        t2: " << t2 << std::endl;
+		std::cout << "        t3: " << t3 << std::endl;
+		std::cout << "        t4: " << t4 << std::endl;
+	}
+
+	//assert(fabs((t1+t2)-(t3+t4) < .001));
+
+	if (fabs((t1+t2)-(t3+t4) < .001)){
+		return true;
+	}
+	else{
+		return false;	
+	} 
+}
+
+void Face::printVertices() const {
+
+	Edge* edge_ptr = edge;
+	Vertex* vert = edge_ptr->getEndVertex();
+	std::cout << "        v1: " << vert->x() << ", " << vert->y() << ", " << vert->z() << std::endl;
+	edge_ptr = edge_ptr->getNext();
+	vert = edge_ptr->getEndVertex();
+	std::cout << "        v2: " << vert->x() << ", " << vert->y() << ", " << vert->z() << std::endl;
+	edge_ptr = edge_ptr->getNext();
+	vert = edge_ptr->getEndVertex();
+	std::cout << "        v3: " << vert->x() << ", " << vert->y() << ", " << vert->z() << std::endl;
+	edge_ptr = edge_ptr->getNext();
+	vert = edge_ptr->getEndVertex();
+	std::cout << "        v4: " << vert->x() << ", " << vert->y() << ", " << vert->z() << std::endl;
+}
+
+double Face::shortestEdge() const {
+	Vec3f a = (*this)[0]->get();
+	Vec3f b = (*this)[1]->get();
+	Vec3f c = (*this)[2]->get();
+	Vec3f d = (*this)[3]->get();
+
+	double e1 = DistanceBetweenTwoPoints(a,b);
+	double e2 = DistanceBetweenTwoPoints(b,c);
+	double e3 = DistanceBetweenTwoPoints(c,d);
+	double e4 = DistanceBetweenTwoPoints(d,a);
+
+	double smallest = e1;
+	if(e2 < smallest) smallest = e2;
+	if(e3 < smallest) smallest = e3;
+	if(e4 < smallest) smallest = e4;
+
+	return smallest;
+
+}

@@ -24,8 +24,9 @@
 //#define DRAW_VISUALIZATION false
 #define DIRECTED_LIGHT false
 #define DRAW_PHOTON_PATHS false
+#define DRAW_FIRST_BOUNCE false
 #define DRAW_COLORED_NORMALS true
-#define DRAW_ESCAPING_PHOTONS false
+#define DRAW_ESCAPING_PHOTONS true
 #define NUM_BOUNCE_VIZ false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
@@ -203,7 +204,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		
 		//Only add the photon to the visualization if it isn't the first bounce (iter is already incremented)
 		// checking kdtree determines whether or not this was called from pressing t.  If so, draw main segment also.
-		if(iter != 0 || single_photon){
+		if((iter != 0 || DRAW_FIRST_BOUNCE) || single_photon){
 			//visualization_line_segments.push_back(LineSegment(position, bounce_location, viz_color));	
 			Vec3f photon_color = wavelengthToRGB(wavelength);
  			Vec4f photon_color_with_alpha = Vec4f(photon_color[0], photon_color[1], photon_color[2], PHOTON_VISUALIZATION_ALPHA);
@@ -242,7 +243,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		Vec3f incoming_direction = ray.getDirection();
 		float incoming_angle_with_surface = hit_normal.AngleBetweenRadians(-1 * incoming_direction);
 
-		//TODO: fix next_n_val
+		//reassigned when the photon either escapes or doesn't -- this is used for material 1 and material 2
 		float next_n_val = nValueSellmeier(wavelength, material->getRefractiveB(), material->getRefractiveC());
 		//float next_n_val = material->getRefractiveIndex();
 		if(hit.getIsBackfacing()){
@@ -312,17 +313,21 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 				if(hit.getIsBackfacing()){
 					if(reflection_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysLeaving();
+						next_n_val = REFRACTIVE_INDEX_OF_AIR;
 					}
 					else{
 						hit.getFace()->incrementNumInteriorBounces();
+						next_n_val = current_n_val;
 					}
 				}
 				else{
 					if(reflection_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysEntering();
+						next_n_val = nValueSellmeier(wavelength, material->getRefractiveB(), material->getRefractiveC());
 					}
 					else{
 						hit.getFace()->incrementNumRaysReflected();
+						next_n_val = current_n_val;
 					}
 				}
 			}
@@ -340,18 +345,22 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 
 					if(refraction_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysLeaving();
+						next_n_val = REFRACTIVE_INDEX_OF_AIR;
 					}
 					else{
 						hit.getFace()->incrementNumInteriorBounces();
+						next_n_val = current_n_val;
 					}
 				}
 				else{
 
 					if(refraction_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysEntering();
+						next_n_val = nValueSellmeier(wavelength, material->getRefractiveB(), material->getRefractiveC());
 					}
 					else{
 						hit.getFace()->incrementNumRaysReflected();
+						next_n_val = current_n_val;
 					}
 				}
 			}
@@ -419,11 +428,14 @@ void PhotonMapping::TracePhotons() {
 			Vec3f direction = RandomDiffuseDirection(normal);
 			if(DIRECTED_LIGHT){
 				
-				//slightly up
-				//direction = Vec3f(1,0.25,0);
+				//slightly down (for rectagular prism)
+				//direction = Vec3f(1,-0.25,0);
 
-				//straight down
-				direction = Vec3f(0.0, -1.0, 0.0);
+				//slightly up (for pyramid prism)
+				direction = Vec3f(1,0.25,0);
+
+				//straight down 
+				//direction = Vec3f(0.0, -1.0, 0.0);
 			}
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);

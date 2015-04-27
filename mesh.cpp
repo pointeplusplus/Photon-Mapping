@@ -307,6 +307,18 @@ void Mesh::Load(const std::string &input_file, ArgParser *_args) {
 	}
 	std::cout << " mesh loaded: " << numFaces() << " faces and " << numEdges() << " edges." << std::endl;
 
+	//Debug output for model validation
+	//Printing face areas
+	std::cout << "Face areas via getArea()" << std::endl;
+	for(unsigned int o = 0; o < original_quads.size(); o++){
+		std::cout << o << ": " << original_quads[o]->getArea() << std::endl;
+		std::cout << "    is convex: " << original_quads[o]->isConvex() << std::endl;
+			if(!(original_quads[o]->isConvex())){
+				std::cout << "    shortest edge: "  << original_quads[o]->shortestEdge() << std::endl;
+				original_quads[o]->printVertices();
+			}
+	}
+
 	if (camera == NULL) {
 		// if not initialized, position a perspective camera and scale it so it fits in the window
 		assert (bbox != NULL);
