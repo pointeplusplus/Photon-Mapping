@@ -51,7 +51,7 @@ void RayTree::setupVBOs() {
 		raytree_verts.push_back(VBOPosColor4(reflected_segments[i].getEnd(),reflected_color));
 		raytree_edge_indices.push_back(VBOIndexedEdge(count,count+1)); count+=2;
 	}
-	std::cout << "Number of general segments: " << general_segments.size();
+	std::cout << "Number of general segments: " << general_segments.size() << "\n";
 	for (i = 0; i < transmitted_segments.size(); i++) {
 		raytree_verts.push_back(VBOPosColor4(transmitted_segments[i].getStart(),transmitted_color));
 		raytree_verts.push_back(VBOPosColor4(transmitted_segments[i].getEnd(),transmitted_color));
