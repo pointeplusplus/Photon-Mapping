@@ -9,10 +9,11 @@
 
 class Photon {
  public:
-
+	Photon() {}
+	
 	// CONSTRUCTOR
 	Photon(const Vec3f &p, const Vec3f &d, const float &w, int b) :
-		position(p),direction_from(d),wavelength(w),bounce(b){}
+		position(p),direction_from(d),bounce(b),wavelength(w){}
 
 	// ACCESSORS
 	const Vec3f& getPosition() const { return position; }
@@ -20,9 +21,9 @@ class Photon {
 	//const Vec3f& getEnergy() const { return energy; }
 	int whichBounce() const { return bounce; }
 
-	const float getWavelength() const { return wavelength; }
+	float getWavelength() const { return wavelength; }
 
-	const double getDistance() const { return position.Length(); }
+	double getDistance() const { return position.Length(); }
 
 	//Vec3f getNormal() const { return normal; }
 
@@ -57,6 +58,6 @@ class Photon {
 
 };
 
-const bool inline compareLengths (const Photon i, const Photon j) { return i.getDistance() < j.getDistance(); }
+inline bool compareLengths (const Photon & i, const Photon & j) { return i.getDistance() < j.getDistance(); }
 
 #endif

@@ -55,7 +55,7 @@ if (UNIX)
   if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
     set_target_properties (render PROPERTIES COMPILE_FLAGS "-g -Wall -pedantic -DFreeBSD")
   else()
-    set_target_properties (render PROPERTIES COMPILE_FLAGS "-g -Wall -pedantic -std=c++0x")
+    set_target_properties (render PROPERTIES COMPILE_FLAGS "-g -Wall -pedantic -std=c++11")
   endif()
 endif()
 

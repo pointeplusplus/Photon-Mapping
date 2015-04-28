@@ -24,18 +24,17 @@
 //#define DRAW_VISUALIZATION false
 #define DIRECTED_LIGHT false
 #define DRAW_PHOTON_PATHS false
-#define DRAW_FIRST_BOUNCE false
 #define DRAW_COLORED_NORMALS true
-#define DRAW_ESCAPING_PHOTONS true
+#define DRAW_ESCAPING_PHOTONS false
 #define NUM_BOUNCE_VIZ false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
-#define PI 3.14159265
+#define PI 3.14159265	
 #define eps 0.001		
 
 Vec3f wavelengthToRGB(double wavelength);
-Vec3f mixColors(const std::vector<std::pair<Photon, float> > & wavelengths);
+const Vec3f& mixColors(std::vector<Photon> wavelengths);
 
 //TODO: change wavelength?
 float nValueSellmeier(float wavelength, std::vector<float> B, std::vector<float> C){
@@ -204,7 +203,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		
 		//Only add the photon to the visualization if it isn't the first bounce (iter is already incremented)
 		// checking kdtree determines whether or not this was called from pressing t.  If so, draw main segment also.
-		if((iter != 0 || DRAW_FIRST_BOUNCE) || single_photon){
+		if(iter != 0 || single_photon){
 			//visualization_line_segments.push_back(LineSegment(position, bounce_location, viz_color));	
 			Vec3f photon_color = wavelengthToRGB(wavelength);
  			Vec4f photon_color_with_alpha = Vec4f(photon_color[0], photon_color[1], photon_color[2], PHOTON_VISUALIZATION_ALPHA);
@@ -243,7 +242,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		Vec3f incoming_direction = ray.getDirection();
 		float incoming_angle_with_surface = hit_normal.AngleBetweenRadians(-1 * incoming_direction);
 
-		//reassigned when the photon either escapes or doesn't -- this is used for material 1 and material 2
+		//TODO: fix next_n_val
 		float next_n_val = nValueSellmeier(wavelength, material->getRefractiveB(), material->getRefractiveC());
 		//float next_n_val = material->getRefractiveIndex();
 		if(hit.getIsBackfacing()){
@@ -313,21 +312,17 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 				if(hit.getIsBackfacing()){
 					if(reflection_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysLeaving();
-						next_n_val = REFRACTIVE_INDEX_OF_AIR;
 					}
 					else{
 						hit.getFace()->incrementNumInteriorBounces();
-						next_n_val = current_n_val;
 					}
 				}
 				else{
 					if(reflection_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysEntering();
-						next_n_val = nValueSellmeier(wavelength, material->getRefractiveB(), material->getRefractiveC());
 					}
 					else{
 						hit.getFace()->incrementNumRaysReflected();
-						next_n_val = current_n_val;
 					}
 				}
 			}
@@ -345,22 +340,18 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 
 					if(refraction_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysLeaving();
-						next_n_val = REFRACTIVE_INDEX_OF_AIR;
 					}
 					else{
 						hit.getFace()->incrementNumInteriorBounces();
-						next_n_val = current_n_val;
 					}
 				}
 				else{
 
 					if(refraction_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysEntering();
-						next_n_val = nValueSellmeier(wavelength, material->getRefractiveB(), material->getRefractiveC());
 					}
 					else{
 						hit.getFace()->incrementNumRaysReflected();
-						next_n_val = current_n_val;
 					}
 				}
 			}
@@ -428,14 +419,11 @@ void PhotonMapping::TracePhotons() {
 			Vec3f direction = RandomDiffuseDirection(normal);
 			if(DIRECTED_LIGHT){
 				
-				//slightly down (for rectagular prism)
-				//direction = Vec3f(1,-0.25,0);
+				//slightly up
+				//direction = Vec3f(1,0.25,0);
 
-				//slightly up (for pyramid prism)
-				direction = Vec3f(1,0.25,0);
-
-				//straight down 
-				//direction = Vec3f(0.0, -1.0, 0.0);
+				//straight down
+				direction = Vec3f(0.0, -1.0, 0.0);
 			}
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
@@ -450,44 +438,30 @@ void PhotonMapping::TracePhotons() {
 	RayTree::Deactivate();
 }
 
-// Returns true if the point is contained within the sphere
-bool inSphere(const Vec3f & center, float radius_squared, const Vec3f & point)
-{
-	float x = center.x() - point.x();
-	float y = center.y() - point.y();
-	float z = center.z() - point.z();
-	return ((x* x) + (y* y) + (z * z)) < radius_squared;
-}
-
-
 // ======================================================================
 // During ray tracing, when a diffuse (or partially diffuse) object is
 // hit, gather the nearby photons to approximate indirect illumination
 
-Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, const Vec3f &direction_from) {
+Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, const Vec3f &direction_from) const {
+
 
 	if (kdtree == NULL) { 
 		std::cout << "WARNING: Photons have not been traced throughout the scene." << std::endl;
 		return Vec3f(0,0,0); 
 	}
-	
-	/*
-	double radius = last_radius;
-	
+
+	double i = .001;
 	std::vector<Photon> closest;
 	std::vector<Photon> distance;
-	
-	// Ununsed (not sure why it was there)
-	//std::vector<double> radii;
-	int i = 1;
+	std::vector<double> radii;
 	//std::cout << "Collecting Photons for point: " << point << std::endl;
 	while(distance.size() < args->num_photons_to_collect){
-		//std::cout << "Round " << i << ", radius = " << radius;
-		
+		std::cout << "Round " << i << " and " << closest.size() 
+				<< " photons found." << std::endl;
 		closest.clear();
 		distance.clear();
-		Vec3f bb1 = Vec3f(point.x() + radius, point.y() + radius, point.z() + radius);
-		Vec3f bb2 = Vec3f(point.x() - radius, point.y() - radius, point.z() - radius);
+		Vec3f bb1 = Vec3f(point.x() + i, point.y() + i, point.z() + i);
+		Vec3f bb2 = Vec3f(point.x() - i, point.y() - i, point.z() - i);
 		BoundingBox bb = BoundingBox(bb2,bb1);
 		kdtree->CollectPhotonsInBox(bb, closest);
 
@@ -506,137 +480,21 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 		{
 			distance.pop_back();
 		}
-		
-		//std::cout << " and " << closest.size() << " photons found.\n";
-		
-		// Update radius
-		if(radius > 0) 
-		{
-			radius *=2;
-		}
-		else 
-		{
-			radius = args->default_radius;
-		}
-		++i;
+		i *= 2;
 	}
-	
 	while(distance.size() > args->num_photons_to_collect){
 		distance.pop_back();
 	}
 	if(distance.size() == 0)
 		return Vec3f(0,0,0);
 	
-	radius = distance.back().getPosition().Length();
-	
-	// Update last radius for next iteration
-	last_radius = 1.15 * radius;
-	
-	// Compute color
+	double area = PI * pow(distance[distance.size() - 1].getPosition().Length(), 2.0);
 	Vec3f color = mixColors(distance);
-
-	double area = PI * pow(radius, 2.0);
 	color.Scale(1/(area * distance.size()));
 	color.Scale(distance.size()/args->num_photons_to_collect);
-	//std::cout << "\n";
+	std::cout << "\n";
 	return color;
-	*/
 	
-	
-	int num_photons_to_collect = args->num_photons_to_collect;
-	float radius = last_radius;
-	float radius_squared = radius * radius;
-	std::vector<Photon> photons;
-	photons.reserve(num_photons_to_collect);
-	std::vector<std::pair<Photon, float> > kept_photons;
-	kept_photons.reserve(num_photons_to_collect);
-
-	while (1)
-	{
-		// construct the bounding box
-		Vec3f min(point.x() - radius, point.y() - radius, point.z() - radius);
-		Vec3f max(point.x() + radius, point.y() + radius, point.z() + radius);
-		BoundingBox bb(min, max);
-		
-		// Collect the photons
-		kdtree->CollectPhotonsInBox(bb, photons);
-
-
-		//std::cout << "Collected " << photons.size() << " photons\n";
-
-		//std::cout << "Bounding box is from " << min << " to " << max << "\n";
-
-		// Throw out the photons not inside the sphere
-		for (unsigned int i = 0; i < photons.size();++i)
-		{
-			//std::cout << "Photon " << itr->getPosition();
-			if (inSphere(point, radius_squared, (photons[i]).getPosition()))
-			{
-				//std::cout << " is outside the sphere.\n";
-				//photons.erase(photons.begin() + i);
-				
-				// Pre-compute distance for use with sorting
-				float dist = (photons[i].getPosition() - point).Length();
-				kept_photons.push_back(std::make_pair(photons[i], dist));
-			}
-			// TODO: throw out wrong direction photons
-		}
-
-		//std::cout << "Kept " << kept_photons.size() << " photons\n";
-	
-		// If we don't have enough photons, double the radius and try again. 
-		// Otherwise, break out and proceed to the next part.
-		if (kept_photons.size() < num_photons_to_collect)
-		{
-			radius *= 2;
-			radius_squared = radius * radius;
-			photons.clear();
-			kept_photons.clear();
-		}
-		else
-		{
-			break;
-		}
-
-	}
-	
-	//std::cout << "The wide radius is " << radius << "\n";
-
-	assert(kept_photons.size() >= num_photons_to_collect);
-
-	// Sort the photons by their distance from the point
-	std::sort(kept_photons.begin(), kept_photons.end(), [&point](const std::pair<Photon, float> & a, const std::pair<Photon, float> & b) -> bool{
-		return a.second < b.second;
-	});
-
-	// Drop the extra photons - we don't need them
-	// taking this out
-	kept_photons.resize(num_photons_to_collect);
-
-
-	//std::cout << "After dropping, now have " << kept_photons.size() << " photons\n";
-
-	// Find out the radius actually required to capture these photons by
-	// taking length of the farthest photon from our point.
-	radius = (kept_photons.back().first.getPosition() - point).Length();
-
-	//std::cout << "The actual radius is " << radius << "\n";
-
-	// Update the "last radius" for the next call to this function. Slightly
-	// overestimate, since it's better to sort a few more photons than get more
-	// from the KD tree.
-	last_radius = 1.15 * radius;
-
-	// Compute color
-	Vec3f color = mixColors(kept_photons);
-
-	double area = PI * radius * radius;
-	//color.Scale(1/(area));
-	color.Scale(1/(area* kept_photons.size()));
-	
-	//color.Scale(kept_photons.size()/args->num_photons_to_collect);
-	//std::cout << "\n";
-	return color;
 }
 
 

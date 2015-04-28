@@ -51,6 +51,7 @@ class PhotonMapping {
 		args = _args;
 		raytracer = NULL;
 		kdtree = NULL;
+		last_radius = args->default_radius;
 	}
 	~PhotonMapping();
 	void setRayTracer(RayTracer *r) { raytracer = r; }
@@ -67,7 +68,7 @@ class PhotonMapping {
 	// step 1: send the photons throughout the scene
 	void TracePhotons();
 	// step 2: collect the photons and return the contribution from indirect illumination
-	Vec3f GatherIndirect(const Vec3f &point, const Vec3f &normal, const Vec3f &direction_from) const;
+	Vec3f GatherIndirect(const Vec3f &point, const Vec3f &normal, const Vec3f &direction_from);
 
 	bool CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches) const;
 
@@ -86,7 +87,10 @@ class PhotonMapping {
 	Radiosity *radiosity;
 
 	std::vector<LineSegment> visualization_line_segments;
-
+	
+	// For gathering
+	double last_radius;
+	
 	// VBO
 	GLuint photon_verts_VBO;
 	GLuint photon_direction_indices_VBO;
