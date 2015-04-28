@@ -67,6 +67,10 @@
 #include <ctime>
 #include <cmath>
 
+// My additions
+#include <mutex>
+
+
 class MTRand {
 // Data
 public:
@@ -81,7 +85,10 @@ protected:
 	uint32 state[N];   // internal state
 	uint32 *pNext;     // next value to get from state
 	int left;          // number of values left before reload needed
-
+	
+	// Added
+	std::mutex gen_lock; // for thread safety
+	
 // Methods
 public:
 	MTRand( const uint32 oneSeed );  // initialize with a simple uint32
@@ -288,6 +295,9 @@ inline MTRand::MTRand( const MTRand& o )
 
 inline MTRand::uint32 MTRand::randInt()
 {
+	// Added
+	gen_lock.lock();
+	
 	// Pull a 32-bit integer from the generator state
 	// Every other access function simply transforms the numbers extracted here
 	
@@ -296,6 +306,10 @@ inline MTRand::uint32 MTRand::randInt()
 	
 	register uint32 s1;
 	s1 = *pNext++;
+	
+	// Added 
+	gen_lock.unlock();
+	
 	s1 ^= (s1 >> 11);
 	s1 ^= (s1 <<  7) & 0x9d2c5680UL;
 	s1 ^= (s1 << 15) & 0xefc60000UL;
