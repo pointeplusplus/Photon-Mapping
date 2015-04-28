@@ -9,6 +9,8 @@
 #include "raytree.h"
 #include "utils.h"
 
+#include <thread>
+
 #ifndef REFRACTIVE_INDEX_OF_AIR
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #endif
@@ -309,7 +311,12 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		break; }
 	case 'p':	case 'P': { 
 		// toggle photon rendering
+		rendering_time = time(NULL);
 		photon_mapping->TracePhotons();
+		rendering_time = time(NULL) - rendering_time;
+		std::cout << "Photon tracing completed in " << rendering_time 
+			<< " seconds (" << (args->num_photons_to_shoot)/((float)rendering_time)
+			<< " photons/second)\n";
 		photon_mapping->setupVBOs();
 		RayTree::setupVBOs();
 		glutPostRedisplay();

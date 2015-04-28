@@ -169,7 +169,9 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	Photon* this_iteration_photon = new Photon(position, direction, wavelength, iter);
 
 	if(kdtree){
+		kdtree_lock.lock();
 		kdtree->AddPhoton(*this_iteration_photon);
+		kdtree_lock.unlock();
 	}
 
 	//If we can bounce no more, return
@@ -210,21 +212,25 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
  			Vec4f photon_color_with_alpha = Vec4f(photon_color[0], photon_color[1], photon_color[2], PHOTON_VISUALIZATION_ALPHA);
 
 			if(DRAW_PHOTON_PATHS){
+				ray_tree_lock.lock();
 				if(NUM_BOUNCE_VIZ){
 					RayTree::AddGeneralSegment(ray,0,hit.getT(), viz_color);
 				}
 				else{
 					RayTree::AddGeneralSegment(ray,0,hit.getT(), photon_color_with_alpha);
 				}
+				ray_tree_lock.unlock();
 			}
 			//Normal of the hit (white and fully opaque) -- make the time constant just to draw a line
 			Ray hit_normal_ray = Ray(bounce_location, hit_normal);
+			ray_tree_lock.lock();
 			if(DRAW_COLORED_NORMALS){
 				RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, photon_color_with_alpha);
 			}
 			else{
 				RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
 			}
+			ray_tree_lock.unlock();
 		}
 
 		//Change the color again to catch the refractive case (so it doesn't continue to be orange)
@@ -395,6 +401,8 @@ void PhotonMapping::TracePhotons() {
 	// first, throw away any existing photons
 	delete kdtree;
 
+	int num_threads = args->num_threads;
+	
 	// consruct a kdtree to store the photons
 	BoundingBox *bb = mesh->getBoundingBox();
 	Vec3f min = bb->getMin();
@@ -412,12 +420,61 @@ void PhotonMapping::TracePhotons() {
 	for (unsigned int i = 0; i < lights.size(); i++) {
 		total_lights_area += lights[i]->getArea();
 	}
+	
 
+	if(num_threads > 1)
+	{
+		std::thread** threads = new std::thread*[args->num_threads];
+		for(int i = 0; i < args->num_threads; ++i)
+		{
+			threads[i] = new std::thread(
+				&PhotonMapping::TracePhotonsWorker,
+				this,
+				std::ref(lights),
+				total_lights_area,
+				num_threads
+			);
+		}
+		
+		// Join the threads back in when they're done.
+		for(int i = 0; i < args->num_threads; ++i)
+		{
+			threads[i]->join();
+			delete threads[i];
+			threads[i] = NULL;
+		}
+		
+		delete [] threads;
+		threads = NULL;
+	}
+	else
+	{
+		// Just 1 thread
+		TracePhotonsWorker(lights, total_lights_area, num_threads);
+	}
+	
+	
+
+	printEscapingFacePhoton();
+	printOutputFile();
+
+	RayTree::Deactivate();
+}
+
+
+void PhotonMapping::TracePhotonsWorker(
+	const std::vector<Face*>& lights, 
+	double total_lights_area,
+	int num_threads
+)
+{
 	// shoot a constant number of photons per unit area of light source
 	// (alternatively, this could be based on the total energy of each light)
 	for (unsigned int i = 0; i < lights.size(); i++) {	
+		// Calculate number to shoot per thread
 		double my_area = lights[i]->getArea();
-		int num = args->num_photons_to_shoot * my_area / total_lights_area;
+		int num = args->num_photons_to_shoot * my_area / total_lights_area / num_threads;
+	
 		// the initial energy for this photon 
 		//Vec3f energy = my_area/double(num) * lights[i]->getMaterial()->getEmittedColor();
 		//replace energy with photon color 
@@ -440,15 +497,20 @@ void PhotonMapping::TracePhotons() {
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
-			TracePhoton(start,direction,wavelength,0, photon_color, NULL, REFRACTIVE_INDEX_OF_AIR, false);
+			TracePhoton(
+				start,
+				direction,
+				wavelength,
+				0, 
+				photon_color, 
+				NULL, 
+				REFRACTIVE_INDEX_OF_AIR, 
+				false
+			);
 		}
 	}
-
-	printEscapingFacePhoton();
-	printOutputFile();
-
-	RayTree::Deactivate();
 }
+
 
 // Returns true if the point is contained within the sphere
 bool inSphere(const Vec3f & center, float radius_squared, const Vec3f & point)
@@ -586,7 +648,7 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	
 		// If we don't have enough photons, double the radius and try again. 
 		// Otherwise, break out and proceed to the next part.
-		if (kept_photons.size() < num_photons_to_collect)
+		if ((int)kept_photons.size() < num_photons_to_collect)
 		{
 			radius *= 2;
 			radius_squared = radius * radius;
@@ -602,7 +664,7 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	
 	//std::cout << "The wide radius is " << radius << "\n";
 
-	assert(kept_photons.size() >= num_photons_to_collect);
+	assert((int)kept_photons.size() >= num_photons_to_collect);
 
 	// Sort the photons by their distance from the point
 	std::sort(kept_photons.begin(), kept_photons.end(), [&point](const std::pair<Photon, float> & a, const std::pair<Photon, float> & b) -> bool{

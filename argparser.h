@@ -104,6 +104,11 @@ public:
 			else if(!strcmp(argv[i],"-progressive_ambient")){
 				progressive_ambient = true;
 			}
+			else if(!strcmp(argv[i],"-num_threads")){
+				i++; assert (i < argc);
+				num_threads = atoi(argv[i]);
+				assert(num_threads >= 1);
+			}
 			else {
 				printf ("whoops error with command line argument %d: '%s'\n",i,argv[i]);
 				Usage(argv[0]);
@@ -173,6 +178,7 @@ public:
 		num_photons_to_collect = 100;
 		gather_indirect = false;
 		default_radius = 0.001;
+		num_threads = 1;
 	}
 
 	// ==============
@@ -214,6 +220,7 @@ public:
 	bool render_kdtree;
 	bool gather_indirect;
 	double default_radius;
+	int num_threads;
 
 };
 

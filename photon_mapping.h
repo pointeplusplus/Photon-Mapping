@@ -1,11 +1,16 @@
 #ifndef _PHOTON_MAPPING_H_
 #define _PHOTON_MAPPING_H_
 
-#include <vector>
+#include <mutex>
 #include <fstream>
+#include <thread>
+#include <vector>
+
+
 #include "vectors.h"
 #include "photon.h"
 #include "vbo_structs.h"
+#include "face.h"
 
 class Material;
 class Mesh;
@@ -67,6 +72,12 @@ class PhotonMapping {
 
 	// step 1: send the photons throughout the scene
 	void TracePhotons();
+	void TracePhotonsWorker(
+		const std::vector<Face*>& lights, 
+		double total_lights_area,
+		int num_threads
+	);
+	
 	// step 2: collect the photons and return the contribution from indirect illumination
 	Vec3f GatherIndirect(const Vec3f &point, const Vec3f &normal, const Vec3f &direction_from);
 
@@ -90,6 +101,8 @@ class PhotonMapping {
 	
 	// For gathering
 	double last_radius;
+	std::mutex kdtree_lock;
+	std::mutex ray_tree_lock;
 	
 	// VBO
 	GLuint photon_verts_VBO;
