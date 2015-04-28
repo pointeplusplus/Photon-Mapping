@@ -631,8 +631,8 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	Vec3f color = mixColors(kept_photons);
 
 	double area = PI * radius * radius;
-	color.Scale(1/(area));
-	// color.Scale(1/(area* kept_photons.size()));
+	//color.Scale(1/(area));
+	color.Scale(1/(area* kept_photons.size()));
 	
 	//color.Scale(kept_photons.size()/args->num_photons_to_collect);
 	//std::cout << "\n";
