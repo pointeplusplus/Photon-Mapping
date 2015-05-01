@@ -9,8 +9,7 @@
 
 // VISUALIZATION MODES FOR RADIOSITY
 #define NUM_RENDER_MODES 6
-enum RENDER_MODE { RENDER_MATERIALS, RENDER_RADIANCE, RENDER_FORM_FACTORS, 
-			 RENDER_LIGHTS, RENDER_UNDISTRIBUTED, RENDER_ABSORBED };
+enum RENDER_MODE { RENDER_MATERIALS };
 
 
 // ======================================================================
@@ -42,10 +41,6 @@ public:
 				i++; assert (i < argc); 
 				height = atoi(argv[i]);
 			} 
-			else if (!strcmp(argv[i],"-num_form_factor_samples")) {
-				i++; assert (i < argc); 
-				num_form_factor_samples = atoi(argv[i]);
-			}
 			else if (!strcmp(argv[i],"-sphere_rasterization")) {
 				i++; assert (i < argc); 
 				sphere_horiz = atoi(argv[i]);
@@ -101,9 +96,6 @@ public:
 			else if (!strcmp(argv[i],"-stratified_antialiasing")) {
 				stratified_antialiasing = true;
 			} 
-			else if(!strcmp(argv[i],"-progressive_ambient")){
-				progressive_ambient = true;
-			}
 			else if(!strcmp(argv[i],"-num_threads")){
 				i++; assert (i < argc);
 				num_threads = atoi(argv[i]);
@@ -153,13 +145,10 @@ public:
 
 		// RADIOSITY PARAMETERS
 		render_mode = RENDER_MATERIALS;
-		interpolate = false;
 		wireframe = false;
-		num_form_factor_samples = 1;
 		sphere_horiz = 8;
 		sphere_vert = 6;
 		cylinder_ring_rasterization = 20; 
-		progressive_ambient = false;
 
 		// RAYTRACING PARAMETERS
 		num_bounces = 0;
@@ -195,13 +184,10 @@ public:
 
 	// RADIOSITY PARAMETERS
 	enum RENDER_MODE render_mode;
-	bool interpolate;
 	bool wireframe;
-	int num_form_factor_samples;
 	int sphere_horiz;
 	int sphere_vert;
 	int cylinder_ring_rasterization;
-	bool progressive_ambient; //Rebecca added
 
 	// RAYTRACING PARAMETERS
 	int num_bounces;

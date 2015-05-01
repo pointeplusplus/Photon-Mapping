@@ -2,9 +2,10 @@
 #define _RADIOSITY_H_
 
 #include <vector>
-#include "vectors.h"
+
 #include "argparser.h"
 #include "vbo_structs.h"
+#include "vectors.h"
 
 class Mesh;
 class Face;
@@ -27,7 +28,6 @@ public:
   ~Radiosity();
   void Reset();
   void Cleanup();
-  void ComputeFormFactors();
   void setRayTracer(RayTracer *r) { raytracer = r; }
   void setPhotonMapping(PhotonMapping *pm) { photon_mapping = pm; }
 
@@ -60,7 +60,6 @@ public:
   
   // =========
   // MODIFIERS
-  double Iterate();
   void setFormFactor(int i, int j, double value) { 
     assert (i >= 0 && i < num_faces);
     assert (j >= 0 && j < num_faces);
@@ -80,7 +79,6 @@ public:
   void setUndistributed(int i, Vec3f value) { 
     assert (i >= 0 && i < num_faces);
     undistributed[i] = value; }
-  void findMaxUndistributed();
   void setAbsorbed(int i, Vec3f value) { 
     assert (i >= 0 && i < num_faces);
     absorbed[i] = value; }

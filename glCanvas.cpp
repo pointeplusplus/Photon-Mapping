@@ -345,31 +345,10 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		break; 
 	}
 		
-		// RADIOSITY STUFF
-	case ' ': 
-		// a single step of radiosity
-		radiosity->Iterate();
-		radiosity->setupVBOs();
-		glutPostRedisplay();
-		break;
-	case 'a': case 'A':
-		// animate radiosity solution
-		args->radiosity_animation = !args->radiosity_animation;
-		if (args->radiosity_animation) 
-			printf ("radiosity animation started, press 'A' to stop\n");
-		else
-			printf ("radiosity animation stopped, press 'A' to start\n");
-		break;
 	case 's': case 'S':
 		// subdivide the mesh for radiosity
 		radiosity->Cleanup();
 		radiosity->getMesh()->Subdivision();
-		radiosity->Reset();
-		radiosity->setupVBOs();
-		glutPostRedisplay();
-		break;
-	case 'c': case 'C':
-		// clear the radiosity solution
 		radiosity->Reset();
 		radiosity->setupVBOs();
 		glutPostRedisplay();
@@ -382,29 +361,7 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		glutPostRedisplay();
 		break;
 	case 'v': case 'V':
-		// toggle the different visualization modes
-		args->render_mode = RENDER_MODE((args->render_mode+1)%NUM_RENDER_MODES);
-		switch (args->render_mode) {
-		case RENDER_MATERIALS: std::cout << "RENDER_MATERIALS\n"; fflush(stdout); break;
-		case RENDER_LIGHTS: std::cout << "RENDER_LIGHTS\n"; fflush(stdout); break;
-		case RENDER_UNDISTRIBUTED: std::cout << "RENDER_UNDISTRIBUTED\n"; fflush(stdout); break;
-		case RENDER_ABSORBED: std::cout << "RENDER_ABSORBED\n"; fflush(stdout); break;
-		case RENDER_RADIANCE: std::cout << "RENDER_RADIANCE\n"; fflush(stdout); break;
-		case RENDER_FORM_FACTORS: std::cout << "RENDER_FORM_FACTORS\n"; fflush(stdout); break;
-		default: assert(0); }
-		radiosity->setupVBOs();
-		glutPostRedisplay();
-		break;
-	case 'i':	case 'I':
-		// interpolate patch illumination values
-		args->interpolate = !args->interpolate;
-		radiosity->setupVBOs();
-		glutPostRedisplay();
-		break;
-	case 'b':	case 'B':
-		// interpolate patch illumination values
-		args->intersect_backfacing = !args->intersect_backfacing;
-		glutPostRedisplay();
+		std::cout << "RENDER_MATERIALS is the only mode\n";
 		break;
 
 	case 'q':	case 'Q':
@@ -609,15 +566,6 @@ int GLCanvas::DrawPixel() {
 
 
 void GLCanvas::idle() {
-	if (args->radiosity_animation) {
-		double undistributed = radiosity->Iterate();
-		if (undistributed < 0.001) {
-			args->radiosity_animation = false;
-			std::cout << "undistributed < 0.001, animation stopped\n"; fflush(stdout);
-		}
-		radiosity->setupVBOs();
-		glutPostRedisplay();
-	}
 	if (args->raytracing_animation) {
 		// draw 100 pixels and then refresh the screen and handle any user input
 		glDisable(GL_LIGHTING);
