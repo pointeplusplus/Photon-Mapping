@@ -44,44 +44,50 @@ public:
   // Set up the canvas and enter the rendering loop
   // Note that this function will not return but can be
   // terminated by calling 'exit(0)'
-  static void initialize(ArgParser *_args, Mesh *_mesh, 
-			 RayTracer *_raytracer, Radiosity *_radiosity, PhotonMapping *_photon_mapping);
+	static void initialize(
+		ArgParser *_args, 
+		Mesh *_mesh, 
+		RayTracer *_raytracer, 
+		Radiosity *_radiosity, 
+		PhotonMapping *_photon_mapping
+	);
+
 private:
 
-  static void InitLight();
+	static void InitLight();
 
-  // various static variables
-  static ArgParser *args;
-  static Mesh *mesh;
-  static RayTracer *raytracer;
-  static Radiosity *radiosity;
-  static PhotonMapping *photon_mapping;
+	// various static variables
+	static ArgParser *args;
+	static Mesh *mesh;
+	static RayTracer *raytracer;
+	static Radiosity *radiosity;
+	static PhotonMapping *photon_mapping;
 
 	// For timing rendering
 	static time_t rendering_time;
-  
-  // state of the mouse cursor
-  static int mouseButton;
-  static int mouseX;
-  static int mouseY;
-  static bool shiftPressed;
-  static bool controlPressed;
-  static bool altPressed;
-  static int raytracing_x;
-  static int raytracing_y;
-  static int raytracing_skip;
 
-  // Callback functions for mouse and keyboard events
-  static void display(void);
-  static void reshape(int w, int h);
-  static void mouse(int button, int state, int x, int y);
-  static void motion(int x, int y);
-  static void keyboard(unsigned char key, int x, int y);
-  static void idle();
-  
-  static int DrawPixel();
-  static Vec3f TraceRay(double i, double j);
-  static void TracePhoton(double i, double j);
+	// state of the mouse cursor
+	static int mouseButton;
+	static int mouseX;
+	static int mouseY;
+	static bool shiftPressed;
+	static bool controlPressed;
+	static bool altPressed;
+	static int raytracing_x;
+	static int raytracing_y;
+	static int raytracing_skip;
+
+	// Callback functions for mouse and keyboard events
+	static void display(void);
+	static void reshape(int w, int h);
+	static void mouse(int button, int state, int x, int y);
+	static void motion(int x, int y);
+	static void keyboard(unsigned char key, int x, int y);
+	static void idle();
+
+	static int DrawPixel();
+	static Vec3f TraceRay(double i, double j);
+	static void TracePhoton(double i, double j);
 };
 
 // ====================================================================
