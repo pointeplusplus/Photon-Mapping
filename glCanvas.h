@@ -95,6 +95,7 @@ private:
 	);
 	static void DrawPixelRow(
 		int row, 
+		int num_rows, 
 		std::vector<Triple<double, double, double> > & colors,
 		std::vector<Triple<double, double, double> > & vertices
 	);

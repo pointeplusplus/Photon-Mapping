@@ -545,14 +545,25 @@ void GLCanvas::DrawPixel(
 
 void GLCanvas::DrawPixelRow(
 	int row, 
+	int num_rows, 
 	std::vector<Triple<double, double, double> > & colors,
 	std::vector<Triple<double, double, double> > & vertices)
 {
 	int width = args->width;
-	for(int i = 0; i < width; ++i)
+	colors.reserve(width * num_rows);
+	vertices.reserve(width * num_rows);
+	
+	for(int i = 0; i < num_rows; ++i)
 	{
-		DrawPixel(i, row, colors, vertices);
-	}	
+		for(int j = 0; j < width; ++j)
+		{
+			DrawPixel(
+				j,  // x coordinate 
+				row + i, // y coordinate
+				colors, // place to store colors
+				vertices); // place to store vertices
+		}
+	}
 }
 
 
@@ -574,6 +585,7 @@ void GLCanvas::idle() {
 		
 		if(num_threads > 1) 
 		{
+			int num_rows_per_thread = 1;
 			std::vector<std::thread*> threads;
 			
 			std::vector<std::vector<Triple<double, double, double> > > colors(num_threads);
@@ -594,12 +606,13 @@ void GLCanvas::idle() {
 					new std::thread(
 						DrawPixelRow, 
 						raytracing_y, 
+						num_rows_per_thread, 
 						std::ref(colors[i]), 
 						std::ref(vertices[i])
 					)
 				);
 				
-				++raytracing_y;
+				raytracing_y += num_rows_per_thread;
 			}
 			// NOTE: since we're pre-allocating the vector spots, there may be
 			// extra spots on the last iteration, and this assertion is no
@@ -639,8 +652,12 @@ void GLCanvas::idle() {
 			// If just 1 thread, draw 1 row.
 			std::vector<Triple<double, double, double> > colors;
 			std::vector<Triple<double, double, double> > vertices;
-			DrawPixelRow(raytracing_y, colors, vertices);
+			
+			// Draw 1 row
+			DrawPixelRow(raytracing_y, 1, colors, vertices);
 			++raytracing_y;
+			
+			// Draw the vertices/colors.
 			for(unsigned int i = 0; i < colors.size(); ++i)
 			{
 				//glColor3f(r,g,b);
