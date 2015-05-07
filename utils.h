@@ -54,6 +54,28 @@ inline double srgb_to_linear(double x) {
 }
 
 // =========================================================================
+// Utility class like std::pair to hold 3 values
+
+template<class T1, class T2, class T3> 
+class Triple
+{
+public:
+	T1 first;
+	T2 second;
+	T3 third;
+};
+
+template<class T1, class T2, class T3>
+Triple<T1, T2, T3> make_triple(const T1& t1, const T2& t2, const T3& t3)
+{
+	Triple<T1, T2, T3> t;
+	t.first = t1;
+	t.second = t2;
+	t.third = t3;
+	return t;
+}
+
+// =========================================================================
 // utility functions 
 inline double DistanceBetweenTwoPoints(const Vec3f &p1, const Vec3f &p2) {
 	Vec3f v = p1-p2;

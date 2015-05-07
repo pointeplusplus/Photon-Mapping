@@ -96,10 +96,15 @@ public:
 			else if (!strcmp(argv[i],"-stratified_antialiasing")) {
 				stratified_antialiasing = true;
 			} 
-			else if(!strcmp(argv[i],"-num_threads")){
+			else if(!strcmp(argv[i],"-num_raytrace_threads")){
 				i++; assert (i < argc);
-				num_threads = atoi(argv[i]);
-				assert(num_threads >= 1);
+				num_raytrace_threads = atoi(argv[i]);
+				assert(num_raytrace_threads >= 1);
+			}
+			else if(!strcmp(argv[i],"-num_shoot_threads")){
+				i++; assert (i < argc);
+				num_shoot_threads = atoi(argv[i]);
+				assert(num_shoot_threads >= 1);
 			}
 			else {
 				printf ("whoops error with command line argument %d: '%s'\n",i,argv[i]);
@@ -132,6 +137,8 @@ public:
 		std::cerr << "		 -num_photons_to_shoot <num_photons\n";
 		std::cerr << "		 -num_photons_to_collect <num_photons\n";
 		std::cerr << "		 -gather_indirect\n";
+		std::cerr << "		 -num_raytrace_threads <num_raytrace_threads>\n";
+		std::cerr << "		 -num_shoot_threads <num_raytrace_threads>\n";
 		exit(1);
 	} 
 	
@@ -167,7 +174,8 @@ public:
 		num_photons_to_collect = 100;
 		gather_indirect = false;
 		default_radius = 0.001;
-		num_threads = 1;
+		num_shoot_threads = 1;
+		num_raytrace_threads = 1;
 	}
 
 	// ==============
@@ -206,7 +214,8 @@ public:
 	bool render_kdtree;
 	bool gather_indirect;
 	double default_radius;
-	int num_threads;
+	int num_shoot_threads;
+	int num_raytrace_threads;
 
 };
 

@@ -259,11 +259,9 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 			// time the animation
 			rendering_time = time(NULL);
 			
-			raytracing_skip = my_max(args->width,args->height) / 10;
-			if (raytracing_skip % 2 == 0) raytracing_skip++;
-			assert (raytracing_skip >= 1);
-			raytracing_x = raytracing_skip/2;
-			raytracing_y = raytracing_skip/2;
+			raytracing_skip = 1; //my_max(args->width,args->height) / 10;
+			raytracing_x = 0;
+			raytracing_y = 0;
 			display(); // clear out any old rendering
 			printf ("raytracing animation started, press 'R' to stop\n");
 		} else {
@@ -327,12 +325,10 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		if (args->raytracing_animation) {
 			// time the animation
 			rendering_time = time(NULL);
-			
+			raytracing_x = 0;
+			raytracing_y = 0;
 			raytracing_skip = 1;//my_max(args->width,args->height) / 10;
-			if (raytracing_skip % 2 == 0) raytracing_skip++;
-			assert (raytracing_skip >= 1);
-			raytracing_x = raytracing_skip/2;
-			raytracing_y = raytracing_skip/2;
+
 			display(); // clear out any old rendering
 			printf ("photon mapping animation started, press 'G' to stop\n");
 		} else {
@@ -523,51 +519,46 @@ void GLCanvas::TracePhoton(double i, double j) {
 }
 
 // Scan through the image from the lower left corner across each row
-// and then up to the top right.	Initially the image is sampled very
-// coarsely.	Increment the static variables that track the progress
+// and then up to the top right. Initially the image is sampled very
+// coarsely. Increment the static variables that track the progress
 // through the scans
-int GLCanvas::DrawPixel() {
-	if (raytracing_x > args->width) {
-		raytracing_x = raytracing_skip/2;
-		raytracing_y += raytracing_skip;
-	}
-	if (raytracing_y > args->height) {
-		if (raytracing_skip == 1)
-		{
-			// stop rendering, matches resolution of current camera
-			rendering_time =  time(NULL) - rendering_time;
-			std::cout << "Rendering completed in " << rendering_time 
-					<< " seconds." << std::endl;
-			return 0;
-		}
-		raytracing_skip = raytracing_skip / 2;
-		if (raytracing_skip % 2 == 0) raytracing_skip++;
-		assert (raytracing_skip >= 1);
-		raytracing_x = raytracing_skip/2;
-		raytracing_y = raytracing_skip/2;
-		glEnd();
-		glPointSize(raytracing_skip);
-		glBegin(GL_POINTS);
-	}
-
+void GLCanvas::DrawPixel(
+	int ray_x, 
+	int ray_y, 
+	std::vector<Triple<double, double, double> > & colors,
+	std::vector<Triple<double, double, double> > & vertices
+) {
 	// compute the color and position of intersection
-	Vec3f color= TraceRay(raytracing_x, raytracing_y);
+	Vec3f color= TraceRay(ray_x, ray_y);
 	double r = linear_to_srgb(color.x());
 	double g = linear_to_srgb(color.y());
 	double b = linear_to_srgb(color.z());
-	glColor3f(r,g,b);
-	//	glColor3f(1,0,0);
-	double x = 2 * (raytracing_x/double(args->width)) - 1;
-	double y = 2 * (raytracing_y/double(args->height)) - 1;
-	glVertex3f(x,y,-1);
-	raytracing_x += raytracing_skip;
-	return 1;
+	
+	colors.push_back(make_triple(r,g,b));
+	//glColor3f(r,g,b);
+	
+	double x = 2 * (ray_x/double(args->width)) - 1;
+	double y = 2 * (ray_y/double(args->height)) - 1;
+	vertices.push_back(make_triple(x,y,(double)(-1)));
+	//glVertex3f(x,y,-1);
+}
+
+void GLCanvas::DrawPixelRow(
+	int row, 
+	std::vector<Triple<double, double, double> > & colors,
+	std::vector<Triple<double, double, double> > & vertices)
+{
+	int width = args->width;
+	for(int i = 0; i < width; ++i)
+	{
+		DrawPixel(i, row, colors, vertices);
+	}	
 }
 
 
 void GLCanvas::idle() {
 	if (args->raytracing_animation) {
-		// draw 100 pixels and then refresh the screen and handle any user input
+		// draw 400 pixels and then refresh the screen and handle any user input
 		glDisable(GL_LIGHTING);
 		glDrawBuffer(GL_FRONT);
 		glDisable(GL_DEPTH_TEST);
@@ -575,19 +566,104 @@ void GLCanvas::idle() {
 		glLoadIdentity();
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		glPointSize(raytracing_skip);
+		glPointSize(1); //glPointSize(raytracing_skip);
 		glBegin(GL_POINTS);
-		for (int i = 0; i < 400; i++) {
-			if (!DrawPixel()) {
-				args->raytracing_animation = false;
+		
+		
+		int num_threads = args->num_raytrace_threads;
+		
+		if(num_threads > 1) 
+		{
+			std::vector<std::thread*> threads;
+			
+			std::vector<std::vector<Triple<double, double, double> > > colors(num_threads);
+			std::vector<std::vector<Triple<double, double, double> > > vertices(num_threads);
+			
+			// Spin off threads to ray trace colors, 1 row of pixels per thread
+			for (int i = 0; i < num_threads; i++)
+			{
+				// Last row
+				if (raytracing_y > args->height)
+				{
+					num_threads = i;
+					break;
+				}
+
+				//std::cout << "colors.size() = " << colors.size() << "\n";
+				threads.push_back(
+					new std::thread(
+						DrawPixelRow, 
+						raytracing_y, 
+						std::ref(colors[i]), 
+						std::ref(vertices[i])
+					)
+				);
 				
-				//TODO: remove this
-				//exit(0);
-	break;
+				++raytracing_y;
+			}
+			// NOTE: since we're pre-allocating the vector spots, there may be
+			// extra spots on the last iteration, and this assertion is no
+			// longer valid.
+			//assert((int)colors.size() == num_threads);
+			
+			// Join threads back in
+			for (int i = 0; i < num_threads; i++)
+			{
+				if(threads[i]->joinable())
+				{
+					threads[i]->join();
+					delete threads[i];
+					threads[i] = NULL;
+				}
+				else 
+				{
+					std::cout << "ERROR: thread " << i << " is not joinable.\n";
+					exit(1);
+				}
+				assert(colors[i].size() == vertices[i].size());
+				
+				for(unsigned int j = 0; j < colors[i].size(); ++j)
+				{
+					//glColor3f(r,g,b);
+					Triple<double, double, double> & tmp = colors[i][j];
+					glColor3f(tmp.first, tmp.second, tmp.third);
+					
+					//glVertex3f(x,y,-1);
+					tmp = vertices[i][j];
+					glVertex3f(tmp.first, tmp.second, tmp.third);
+				}
 			}
 		}
+		else
+		{
+			// If just 1 thread, draw 1 row.
+			std::vector<Triple<double, double, double> > colors;
+			std::vector<Triple<double, double, double> > vertices;
+			DrawPixelRow(raytracing_y, colors, vertices);
+			++raytracing_y;
+			for(unsigned int i = 0; i < colors.size(); ++i)
+			{
+				//glColor3f(r,g,b);
+				Triple<double, double, double> & tmp = colors[i];
+				glColor3f(tmp.first, tmp.second, tmp.third);
+				
+				//glVertex3f(x,y,-1);
+				tmp = vertices[i];
+				glVertex3f(tmp.first, tmp.second, tmp.third);
+			}
+		}
+		
 		glEnd();
 		glFlush();
+		
+		// Last row
+		if (raytracing_y > args->height) {
+			// stop rendering, matches resolution of current camera
+			rendering_time =  time(NULL) - rendering_time;
+			std::cout << "Rendering completed in " << rendering_time 
+					<< " seconds." << std::endl;
+			args->raytracing_animation = false;
+		}
 	}
 }
 

@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <string>
+#include <vector>
 
 // Included files for OpenGL Rendering
 #ifdef __APPLE__
@@ -26,6 +27,7 @@
 #endif
 
 #include "vectors.h"
+#include "utils.h"
 
 class ArgParser;
 class Mesh;
@@ -65,7 +67,7 @@ private:
 
 	// For timing rendering
 	static time_t rendering_time;
-
+  
 	// state of the mouse cursor
 	static int mouseButton;
 	static int mouseX;
@@ -85,9 +87,20 @@ private:
 	static void keyboard(unsigned char key, int x, int y);
 	static void idle();
 
-	static int DrawPixel();
+	static void DrawPixel(
+		int ray_x, 
+		int ray_y, 
+		std::vector<Triple<double, double, double> > & colors,
+		std::vector<Triple<double, double, double> > & vertices
+	);
+	static void DrawPixelRow(
+		int row, 
+		std::vector<Triple<double, double, double> > & colors,
+		std::vector<Triple<double, double, double> > & vertices
+	);
 	static Vec3f TraceRay(double i, double j);
 	static void TracePhoton(double i, double j);
+
 };
 
 // ====================================================================

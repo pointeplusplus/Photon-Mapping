@@ -377,10 +377,13 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	//Visualize photons even when they don't hit anything.
 	else {
 		if(DRAW_ESCAPING_PHOTONS){
+			ray_tree_lock.lock();
 			//Ray bounce = Ray(bounce_location, bounce);
 			RayTree::AddGeneralSegment(ray, 0, NORMAL_VISUALIZATION_LENGTH * 5, Vec4f(0.0,0.0,0.0,1.0));
+			ray_tree_lock.unlock();
 		}
-		//This is a single photon escaping
+		//This is a single photon escaping. Single_photon is only true when
+		//'t' is pressed to send a single photon through the scene.
 		if(single_photon){
 			printEscapingFacePhoton();
 			printOutputFile();
@@ -401,7 +404,7 @@ void PhotonMapping::TracePhotons() {
 	// first, throw away any existing photons
 	delete kdtree;
 
-	int num_threads = args->num_threads;
+	int num_threads = args->num_shoot_threads;
 	
 	// consruct a kdtree to store the photons
 	BoundingBox *bb = mesh->getBoundingBox();
@@ -424,8 +427,8 @@ void PhotonMapping::TracePhotons() {
 
 	if(num_threads > 1)
 	{
-		std::thread** threads = new std::thread*[args->num_threads];
-		for(int i = 0; i < args->num_threads; ++i)
+		std::thread** threads = new std::thread*[num_threads];
+		for(int i = 0; i < num_threads; ++i)
 		{
 			threads[i] = new std::thread(
 				&PhotonMapping::TracePhotonsWorker,
@@ -437,7 +440,7 @@ void PhotonMapping::TracePhotons() {
 		}
 		
 		// Join the threads back in when they're done.
-		for(int i = 0; i < args->num_threads; ++i)
+		for(int i = 0; i < num_threads; ++i)
 		{
 			threads[i]->join();
 			delete threads[i];
