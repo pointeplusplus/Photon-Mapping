@@ -106,6 +106,10 @@ public:
 				num_shoot_threads = atoi(argv[i]);
 				assert(num_shoot_threads >= 1);
 			}
+			else if(!strcmp(argv[i],"-balanced_tree")){
+				balanced_tree = true;
+			}
+			
 			else {
 				printf ("whoops error with command line argument %d: '%s'\n",i,argv[i]);
 				Usage(argv[0]);
@@ -139,6 +143,7 @@ public:
 		std::cerr << "		 -gather_indirect\n";
 		std::cerr << "		 -num_raytrace_threads <num_raytrace_threads>\n";
 		std::cerr << "		 -num_shoot_threads <num_raytrace_threads>\n";
+		std::cerr << "		 -balanced_tree\n";
 		exit(1);
 	} 
 	
@@ -176,6 +181,7 @@ public:
 		default_radius = 0.001;
 		num_shoot_threads = 1;
 		num_raytrace_threads = 1;
+		balanced_tree = false;
 	}
 
 	// ==============
@@ -216,7 +222,7 @@ public:
 	double default_radius;
 	int num_shoot_threads;
 	int num_raytrace_threads;
-
+	bool balanced_tree;
 };
 
 #endif

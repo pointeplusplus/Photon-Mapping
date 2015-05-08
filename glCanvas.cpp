@@ -38,7 +38,7 @@ int GLCanvas::raytracing_y;
 int GLCanvas::raytracing_skip;
 
 // For timing animation
-time_t GLCanvas::rendering_time;
+unsigned long long GLCanvas::rendering_time;
 
 // ========================================================
 // Initialize all appropriate OpenGL variables, set
@@ -252,12 +252,14 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 	switch (key) {
 		// RAYTRACING STUFF
 	case 'r':	case 'R':
+	{
 		// animate raytracing of the scene
 		args->gather_indirect=false;
 		args->raytracing_animation = !args->raytracing_animation;
 		if (args->raytracing_animation) {
 			// time the animation
-			rendering_time = time(NULL);
+			rendering_time = std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count();
 			
 			raytracing_skip = 1; //my_max(args->width,args->height) / 10;
 			raytracing_x = 0;
@@ -267,11 +269,14 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		} else {
 			printf ("raytracing animation stopped, press 'R' to start\n");		
 			// Print time to render
-			rendering_time =  time(NULL) - rendering_time;
-			std::cout << "Rendering completed in " << rendering_time 
+			rendering_time = std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count() 
+				- rendering_time;
+			std::cout << "Rendering completed in " << rendering_time/1000000.0
 					<< " seconds." << std::endl;
 		}
 		break;
+	}
 	case 't':	case 'T': {
 		// visualize the ray tree for the pixel at the current mouse position
 		int i = x;
@@ -309,12 +314,11 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		break; }
 	case 'p':	case 'P': { 
 		// toggle photon rendering
-		rendering_time = time(NULL);
 		photon_mapping->TracePhotons();
-		rendering_time = time(NULL) - rendering_time;
-		std::cout << "Photon tracing completed in " << rendering_time 
-			<< " seconds (" << (args->num_photons_to_shoot)/((float)rendering_time)
-			<< " photons/second)\n";
+		
+		// TODO: remove
+		//photon_mapping->printKDTree();
+		
 		photon_mapping->setupVBOs();
 		RayTree::setupVBOs();
 		glutPostRedisplay();
@@ -324,7 +328,10 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		args->raytracing_animation = !args->raytracing_animation;
 		if (args->raytracing_animation) {
 			// time the animation
-			rendering_time = time(NULL);
+			rendering_time = 
+				std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count();
+
 			raytracing_x = 0;
 			raytracing_y = 0;
 			raytracing_skip = 1;//my_max(args->width,args->height) / 10;
@@ -334,14 +341,17 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		} else {
 			printf ("photon mapping animation stopped, press 'G' to start\n");		
 			// Print time to render
-			rendering_time =  time(NULL) - rendering_time;
-			std::cout << "Rendering completed in " << rendering_time 
+			rendering_time = std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count() 
+				- rendering_time;
+			std::cout << "Rendering stopped after " << rendering_time/1000000.0 
 					<< " seconds." << std::endl;
 		}
 		break; 
 	}
 		
 	case 's': case 'S':
+	{
 		// subdivide the mesh for radiosity
 		radiosity->Cleanup();
 		radiosity->getMesh()->Subdivision();
@@ -349,18 +359,22 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		radiosity->setupVBOs();
 		glutPostRedisplay();
 		break;
-
+	}
 		// VISUALIZATIONS
 	case 'w':	case 'W':
+	{
 		// render wireframe mode
 		args->wireframe = !args->wireframe;
 		glutPostRedisplay();
 		break;
+	}
 	case 'v': case 'V':
+	{
 		std::cout << "RENDER_MATERIALS is the only mode\n";
 		break;
-
+	}
 	case 'q':	case 'Q':
+	{
 		// quit
 		delete GLCanvas::photon_mapping;
 		delete GLCanvas::raytracer;
@@ -368,6 +382,7 @@ void GLCanvas::keyboard(unsigned char key, int x, int y) {
 		delete GLCanvas::mesh;
 		exit(0);
 		break;
+	}
 	default:
 		printf("UNKNOWN KEYBOARD INPUT	'%c'\n", key);
 	}
@@ -676,8 +691,10 @@ void GLCanvas::idle() {
 		// Last row
 		if (raytracing_y > args->height) {
 			// stop rendering, matches resolution of current camera
-			rendering_time =  time(NULL) - rendering_time;
-			std::cout << "Rendering completed in " << rendering_time 
+			rendering_time = std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count() 
+				- rendering_time;
+			std::cout << "Rendering completed in " << rendering_time/1000000.0
 					<< " seconds." << std::endl;
 			args->raytracing_animation = false;
 		}

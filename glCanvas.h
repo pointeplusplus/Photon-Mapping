@@ -66,7 +66,7 @@ private:
 	static PhotonMapping *photon_mapping;
 
 	// For timing rendering
-	static time_t rendering_time;
+	static unsigned long long rendering_time;
   
 	// state of the mouse cursor
 	static int mouseButton;

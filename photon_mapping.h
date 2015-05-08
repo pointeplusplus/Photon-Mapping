@@ -85,13 +85,18 @@ class PhotonMapping {
 
 	// trace a single photon
 	void TracePhoton(const Vec3f &position, const Vec3f &direction, const float wavelength, int iter, Vec4f viz_color, Material* current_material, float current_n_val, bool single_photon);
-
+	
+	void makeKDTree();
+	// Print the kdtree
+	void printKDTree() const;
  private:
 
 	
 
 	// REPRESENTATION
 	KDTree *kdtree;
+	std::vector<Photon> photons;
+	
 	Mesh *mesh;
 	ArgParser *args;
 	RayTracer *raytracer;
@@ -101,7 +106,7 @@ class PhotonMapping {
 	
 	// For gathering
 	double last_radius;
-	std::mutex kdtree_lock;
+	std::mutex photon_lock;
 	std::mutex ray_tree_lock;
 	
 	// VBO

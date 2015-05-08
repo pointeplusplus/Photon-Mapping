@@ -3,8 +3,10 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 #include <vector>
 #include <fstream>
+#include <chrono>
 
 #include "argparser.h"
 #include "photon_mapping.h"
@@ -167,12 +169,13 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 
 	//Add this photon to thee kd tree
 	Photon* this_iteration_photon = new Photon(position, direction, wavelength, iter);
+	
+	// Push back onto photon vector for KDTree creating later
+	photon_lock.lock();
+	photons.push_back(*this_iteration_photon);
+	photon_lock.unlock();
 
-	if(kdtree){
-		kdtree_lock.lock();
-		kdtree->AddPhoton(*this_iteration_photon);
-		kdtree_lock.unlock();
-	}
+
 
 	//If we can bounce no more, return
 	// Check to see if the material absorbs the light 
@@ -400,21 +403,18 @@ void PhotonMapping::TracePhotons() {
 	std::cout << "trace photons" << std::endl;
 
 	RayTree::Activate();
-
+	
+	unsigned long long start_time = 
+		std::chrono::duration_cast<std::chrono::microseconds>(
+		std::chrono::system_clock::now().time_since_epoch()).count();
+	
 	// first, throw away any existing photons
 	delete kdtree;
-
+	kdtree = NULL;
+	photons.clear();
+	
 	int num_threads = args->num_shoot_threads;
 	
-	// consruct a kdtree to store the photons
-	BoundingBox *bb = mesh->getBoundingBox();
-	Vec3f min = bb->getMin();
-	Vec3f max = bb->getMax();
-	Vec3f diff = max-min;
-	min -= 0.001*diff;
-	max += 0.001*diff;
-	kdtree = new KDTree(BoundingBox(min,max));
-
 	// photons emanate from the light sources
 	const std::vector<Face*>& lights = mesh->getLights();
 
@@ -456,8 +456,17 @@ void PhotonMapping::TracePhotons() {
 		TracePhotonsWorker(lights, total_lights_area, num_threads);
 	}
 	
-	
+	start_time = std::chrono::duration_cast<std::chrono::microseconds>(
+		std::chrono::system_clock::now().time_since_epoch()).count() 
+		- start_time;
 
+	std::cout << "Photon tracing completed in " << start_time/1000000.0 
+		<< " seconds (" << (args->num_photons_to_shoot)/(start_time/1000000.0)
+		<< " photons/second) using " << num_threads << " threads\n";
+	
+	// Construct the KDTree
+	makeKDTree();
+	
 	printEscapingFacePhoton();
 	printOutputFile();
 
@@ -704,7 +713,159 @@ Vec3f PhotonMapping::GatherIndirect(const Vec3f &point, const Vec3f &normal, con
 	return color;
 }
 
+void PhotonMapping::makeKDTree()
+{
+	// If not waiting to construct a balanced tree
+	if(!args->balanced_tree)
+	{
+		std::cout << "Creating unbalanced KDTree...\n";
 
+		unsigned long long start_time = 
+			std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count();
+		
+		
+		// consruct a kdtree to store the photons
+		BoundingBox *bb = mesh->getBoundingBox();
+		Vec3f min = bb->getMin();
+		Vec3f max = bb->getMax();
+		Vec3f diff = max-min;
+		min -= 0.001*diff;
+		max += 0.001*diff;
+		kdtree = new KDTree(BoundingBox(min,max));
+		
+		// Add all the photons, 1 by 1.
+		for(unsigned int i = 0; i < photons.size(); ++i)
+		{
+			kdtree->AddPhoton(photons[i]);
+		}
+		start_time = std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count() 
+				- start_time;
+		std::cout << "Creation completed in " << start_time/1000000.0 << " seconds.\n";
+	}
+	else
+	{
+		std::cout << "Creating balanced KDTree...\n";
+		
+		unsigned long long start_time = 
+			std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count();
+		
+		
+		// Find the bounding box for the tree
+		BoundingBox *bb = mesh->getBoundingBox();
+		Vec3f min = bb->getMin();
+		Vec3f max = bb->getMax();
+		Vec3f diff = max-min;
+		min -= 0.001*diff;
+		max += 0.001*diff;
+		
+		// Construct the balanced tree using the special constructor
+		kdtree = new KDTree(BoundingBox(min, max), 0, photons);
+		
+		// Throw out the vector representation of photons to save memory
+		photons.clear();
+		
+		start_time = std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch()).count() 
+				- start_time;
+		std::cout << "Creation completed in " << start_time/1000000.0 
+			<< " seconds.\n";
+	}
+}
+
+// Print the kdtree
+void PhotonMapping::printKDTree() const
+{
+	std::vector<int> nums;
+	kdtree->printLeaves(0, nums);
+	std::sort(nums.begin(), nums.end());
+	/*
+	for(int i = 0; i < nums.size(); ++i)
+	{
+		std::cout << nums[i] << "\n";
+	}
+	*/
+	int max_ = 0;
+	int count = 0;
+	std::vector<int> stats(13, 0);
+	for(unsigned int i = 0; i < nums.size(); ++i)
+	{
+		if(nums[i] >= 0 && nums[i] <= 10)
+		{
+			stats[0]++;
+		}
+		else if(nums[i] > 10 && nums[i] <= 20)
+		{
+			stats[1]++;
+		}
+		else if(nums[i] > 20 && nums[i] <= 30)
+		{
+			stats[2]++;
+		}
+		else if(nums[i] > 30 && nums[i] <= 40)
+		{
+			stats[3]++;
+		}
+		else if(nums[i] > 40 && nums[i] <= 50)
+		{
+			stats[4]++;
+		}
+		else if(nums[i] > 50 && nums[i] <= 60)
+		{
+			stats[5]++;
+		}
+		else if(nums[i] > 60 && nums[i] <= 70)
+		{
+			stats[6]++;
+		}
+		else if(nums[i] > 70 && nums[i] <= 80)
+		{
+			stats[7]++;
+		}
+		else if(nums[i] > 80 && nums[i] <= 90)
+		{
+			stats[8]++;
+		}
+		else if(nums[i] > 90 && nums[i] <= 100)
+		{
+			stats[9]++;
+		}
+		else if(nums[i] > 100 && nums[i] <= 400)
+		{
+			stats[10]++;
+		}
+		else if(nums[i] > 400 && nums[i] <= 700)
+		{
+			stats[11]++;
+		}
+		else if(nums[i] > 700)
+		{
+			stats[12]++;
+		}
+		max_ = std::max(max_, nums[i]);
+		count += nums[i];
+	}
+	
+	std::cout << "There are " << stats[0] << " Nodes with 0 -> 10 photons\n";
+	std::cout << "There are " << stats[1] << " Nodes with 11 -> 20 photons\n";
+	std::cout << "There are " << stats[2] << " Nodes with 21 -> 30 photons\n";
+	std::cout << "There are " << stats[3] << " Nodes with 31 -> 40 photons\n";
+	std::cout << "There are " << stats[4] << " Nodes with 41 -> 50 photons\n";
+	std::cout << "There are " << stats[5] << " Nodes with 51 -> 60 photons\n";
+	std::cout << "There are " << stats[6] << " Nodes with 61 -> 70 photons\n";
+	std::cout << "There are " << stats[7] << " Nodes with 71 -> 80 photons\n";
+	std::cout << "There are " << stats[8] << " Nodes with 81 -> 90 photons\n";
+	std::cout << "There are " << stats[9] << " Nodes with 91 -> 100 photons\n";
+	std::cout << "There are " << stats[10] << " Nodes with 101 -> 400 photons\n";
+	std::cout << "There are " << stats[11] << " Nodes with 401 -> 700 photons\n";
+	std::cout << "There are " << stats[12] << " Nodes with 701+ photons\n";
+	std::cout << "There are " << count << " total photons.\n";
+	
+	
+	return;
+}
 
 // ======================================================================
 // PHOTON VISUALIZATION FOR DEBUGGING
