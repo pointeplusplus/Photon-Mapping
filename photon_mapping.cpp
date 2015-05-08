@@ -404,14 +404,15 @@ void PhotonMapping::TracePhotons() {
 
 	RayTree::Activate();
 	
-	unsigned long long start_time = 
-		std::chrono::duration_cast<std::chrono::microseconds>(
-		std::chrono::system_clock::now().time_since_epoch()).count();
-	
 	// first, throw away any existing photons
 	delete kdtree;
 	kdtree = NULL;
 	photons.clear();
+	
+	unsigned long long start_time = 
+		std::chrono::duration_cast<std::chrono::microseconds>(
+		std::chrono::system_clock::now().time_since_epoch()).count();
+	
 	
 	int num_threads = args->num_shoot_threads;
 	
