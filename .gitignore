@@ -2,4 +2,5 @@
 
 *.h~
 *.cpp~
-
+.DS_Store
+build/
