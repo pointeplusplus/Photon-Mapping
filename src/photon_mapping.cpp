@@ -25,11 +25,13 @@
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
 #define DIRECTED_LIGHT false
-#define DRAW_PHOTON_PATHS false
+#define DRAW_PHOTON_PATHS true
 #define DRAW_FIRST_BOUNCE false
-#define DRAW_COLORED_NORMALS true
-#define DRAW_ESCAPING_PHOTONS true
-#define NUM_BOUNCE_VIZ false
+#define DRAW_COLORED_PATHS true
+#define DRAW_NORMALS true
+#define DRAW_COLORED_NORMALS false
+#define DRAW_ESCAPING_PHOTONS false
+#define NUM_BOUNCE_VIZ true
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .3
@@ -144,8 +146,20 @@ void PhotonMapping::printOutputFile(){
 			<< face->getNumRaysEnteringFace() << " "
 			<< face->getNumRaysLeavingFace() << std::endl;
 	}
-
+	//print out totals
 	output << total_interior_bounces << " " << total_rays_reflected << " " << total_rays_entering << " " << total_rays_leaving << std::endl;
+
+	//print out all directions the light is leaving all faces together
+	output << "leaving_directions: ";
+	for(int f = 0; f < mesh->numFaces(); f++){
+		face = mesh->getFace(f);
+		std::vector<Vec3f> directions = face->getLeavingDirections();
+		std::cout << "size of directions vector: " << directions.size() << std::endl;
+		for(int d = 0; d < directions.size(); d++){
+			output << "{" << directions[d].x() << "," << directions[d].y() << "," << directions[d].z() << "} ";
+		}
+	}
+	output << std::endl;
 }
 
 // ========================================================================
@@ -219,19 +233,24 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 				if(NUM_BOUNCE_VIZ){
 					RayTree::AddGeneralSegment(ray,0,hit.getT(), viz_color);
 				}
-				else{
+				else if (DRAW_COLORED_PATHS){
 					RayTree::AddGeneralSegment(ray,0,hit.getT(), photon_color_with_alpha);
+				}
+				else{
+					RayTree::AddGeneralSegment(ray,0,hit.getT(), Vec4f(1.0,1.0,1.0,PHOTON_VISUALIZATION_ALPHA));
 				}
 				ray_tree_lock.unlock();
 			}
 			//Normal of the hit (white and fully opaque) -- make the time constant just to draw a line
 			Ray hit_normal_ray = Ray(bounce_location, hit_normal);
 			ray_tree_lock.lock();
-			if(DRAW_COLORED_NORMALS){
-				RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, photon_color_with_alpha);
-			}
-			else{
-				RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
+			if(DRAW_NORMALS){
+				if(DRAW_COLORED_NORMALS){
+					RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, photon_color_with_alpha);
+				}
+				else{
+					RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
+				}
 			}
 			ray_tree_lock.unlock();
 		}
@@ -322,6 +341,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 				if(hit.getIsBackfacing()){
 					if(reflection_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysLeaving();
+						hit.getFace()->addLightLeavingDirection(reflection_direction);
 						next_n_val = REFRACTIVE_INDEX_OF_AIR;
 					}
 					else{
@@ -354,6 +374,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 
 					if(refraction_direction.AngleBetweenRadians(hit_normal) > M_PI/2.0){
 						hit.getFace()->incrementNumRaysLeaving();
+						hit.getFace()->addLightLeavingDirection(refraction_direction);
 						next_n_val = REFRACTIVE_INDEX_OF_AIR;
 					}
 					else{

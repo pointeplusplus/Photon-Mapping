@@ -5,7 +5,7 @@
 #include "ray.h"
 #include "vertex.h"
 #include "hit.h"
-
+#include <vector> 
 class Material;
 class Hit;
 
@@ -59,6 +59,7 @@ public:
 	int getNumRaysEnteringFace() const {return num_rays_entering_face; }
 	int getNumInteriorBounces() const {return num_interior_bounces; }
 	int getNumRaysReflected() const {return num_rays_reflected; }
+	const std::vector<Vec3f>& getLeavingDirections() const {return light_leaving_directions;}
 
 	// =========
 	// MODIFIERS
@@ -81,6 +82,10 @@ public:
 
 	void incrementNumRaysReflected(){
 		num_rays_reflected++;
+	}
+
+	void addLightLeavingDirection(Vec3f leaving_direction){
+		light_leaving_directions.push_back(leaving_direction);
 	}
 
 	//Debug Functions
@@ -123,6 +128,7 @@ protected:
 	int num_rays_entering_face;
 	int num_interior_bounces;
 	int num_rays_reflected;
+	std::vector<Vec3f> light_leaving_directions;
 };
 
 // ===========================================================
