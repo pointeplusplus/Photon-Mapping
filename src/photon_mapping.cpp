@@ -25,16 +25,16 @@
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
 #define DIRECTED_LIGHT false
-#define DRAW_PHOTON_PATHS true
+#define DRAW_PHOTON_PATHS false
 #define DRAW_FIRST_BOUNCE false
 #define DRAW_COLORED_PATHS true
 #define DRAW_NORMALS true
-#define DRAW_COLORED_NORMALS false
+#define DRAW_COLORED_NORMALS true
 #define DRAW_ESCAPING_PHOTONS false
-#define NUM_BOUNCE_VIZ true
+#define NUM_BOUNCE_VIZ false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
-#define NORMAL_VISUALIZATION_LENGTH .3
+#define NORMAL_VISUALIZATION_LENGTH .1
 #define PI 3.14159265
 #define eps 0.001		
 
@@ -86,6 +86,8 @@ void PhotonMapping::printEscapingFacePhoton(){
 	std::cout << "filename: " << args->output_file << std::endl; 
 	*/
 
+	/*
+
 	int total_interior_bounces = 0;
 	int total_rays_reflected = 0; 
 	int total_rays_entering = 0;
@@ -104,10 +106,12 @@ void PhotonMapping::printEscapingFacePhoton(){
 		}
 	}
 	std::cout << total_interior_bounces << " " << total_rays_reflected << " " << total_rays_entering << " " << total_rays_leaving << std::endl;	
+	*/
 }
 
 void PhotonMapping::printOutputFile(){
 	
+	/*
 	//summming variables
 	int total_interior_bounces = 0;
 	int total_rays_reflected = 0; 
@@ -154,12 +158,14 @@ void PhotonMapping::printOutputFile(){
 	for(int f = 0; f < mesh->numFaces(); f++){
 		face = mesh->getFace(f);
 		std::vector<Vec3f> directions = face->getLeavingDirections();
-		std::cout << "size of directions vector: " << directions.size() << std::endl;
+		//std::cout << "size of directions vector: " << directions.size() << std::endl;
 		for(int d = 0; d < directions.size(); d++){
 			output << "{" << directions[d].x() << "," << directions[d].y() << "," << directions[d].z() << "} ";
 		}
 	}
 	output << std::endl;
+	std::cout << "Output file printed successfully" << std::endl;
+	*/
 }
 
 // ========================================================================
@@ -523,7 +529,10 @@ void PhotonMapping::TracePhotonsWorker(
 				//direction = Vec3f(1,-0.25,0);
 
 				//slightly up (for pyramid prism)
-				direction = Vec3f(1,0.25,0);
+				//direction = Vec3f(1,0.25,0);
+
+				//directed at diamond from light
+				direction = Vec3f(2.0, -8.0, 2.0);
 
 				//straight down 
 				//direction = Vec3f(0.0, -1.0, 0.0);
