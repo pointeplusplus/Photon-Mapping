@@ -28,7 +28,7 @@
 #define DRAW_PHOTON_PATHS true
 #define DRAW_FIRST_BOUNCE false
 #define DRAW_COLORED_PATHS true
-#define DRAW_NORMALS true
+#define DRAW_NORMALS false
 #define DRAW_COLORED_NORMALS false
 #define DRAW_ESCAPING_PHOTONS false
 #define NUM_BOUNCE_VIZ true
@@ -180,6 +180,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	colors.push_back(Vec4f(0.0, 1.0, 0.0, PHOTON_VISUALIZATION_ALPHA)); // green
 	colors.push_back(Vec4f(1.0, 1.0, 0.0, PHOTON_VISUALIZATION_ALPHA)); // yellow
 	colors.push_back(Vec4f(0.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA)); // cyan
+	colors.push_back(Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA)); // orange
 
 	//Add this photon to thee kd tree
 	Photon* this_iteration_photon = new Photon(position, direction, wavelength, iter);
@@ -217,9 +218,9 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		Vec3f bounce_location = ray.getOrigin() + (hit.getT() * ray.getDirection());
 
 		//If it is not refracted, set the viz color.  Otherwise, keep orange.
-		if(!(viz_color[0] == 1.0 && viz_color[1] == 0.5 && viz_color[2] == 0.0)){
+		//if(!(viz_color[0] == 1.0 && viz_color[1] == 0.5 && viz_color[2] == 0.0)){
 			viz_color = colors[iter%colors.size()];
-		}
+		//}
 		
 		//Only add the photon to the visualization if it isn't the first bounce (iter is already incremented)
 		// checking kdtree determines whether or not this was called from pressing t.  If so, draw main segment also.
@@ -523,10 +524,10 @@ void PhotonMapping::TracePhotonsWorker(
 				//direction = Vec3f(1,-0.25,0);
 
 				//slightly up (for pyramid prism)
-				direction = Vec3f(1,0.25,0);
+				//direction = Vec3f(1,0.25,0);
 
 				//straight down 
-				//direction = Vec3f(0.0, -1.0, 0.0);
+				direction = Vec3f(0.0, -1.0, 0.0);
 			}
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
