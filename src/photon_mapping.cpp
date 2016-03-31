@@ -24,19 +24,20 @@
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
-#define DIRECTED_LIGHT false
+#define DIRECTED_LIGHT true
 #define DRAW_PHOTON_PATHS false
 #define DRAW_FIRST_BOUNCE false
-#define DRAW_COLORED_PATHS true
-#define DRAW_NORMALS true
-#define DRAW_COLORED_NORMALS true
+#define DRAW_COLORED_PATHS false
+#define DRAW_NORMALS false
+#define DRAW_COLORED_NORMALS false
 #define DRAW_ESCAPING_PHOTONS false
 #define NUM_BOUNCE_VIZ false
 //#define ORIGINAL_N_VAL 1.0  // TODO, this should be passed in because it won't always be coming from air
 #define REFRACTIVE_INDEX_OF_AIR 1.000293
 #define NORMAL_VISUALIZATION_LENGTH .1
 #define PI 3.14159265
-#define eps 0.001		
+#define eps 0.001	
+int num_shot = 0;	
 
 Vec3f wavelengthToRGB(double wavelength);
 Vec3f mixColors(const std::vector<std::pair<Photon, float> > & wavelengths);
@@ -84,9 +85,9 @@ void PhotonMapping::printEscapingFacePhoton(){
 		std::cout << "    " << f << ": " << face->getNumRaysLeavingFace() << "   ";
 	}
 	std::cout << "filename: " << args->output_file << std::endl; 
-	*/
+	
 
-	/*
+	
 
 	int total_interior_bounces = 0;
 	int total_rays_reflected = 0; 
@@ -111,7 +112,7 @@ void PhotonMapping::printEscapingFacePhoton(){
 
 void PhotonMapping::printOutputFile(){
 	
-	/*
+	
 	//summming variables
 	int total_interior_bounces = 0;
 	int total_rays_reflected = 0; 
@@ -165,13 +166,13 @@ void PhotonMapping::printOutputFile(){
 	}
 	output << std::endl;
 	std::cout << "Output file printed successfully" << std::endl;
-	*/
+	
 }
 
 // ========================================================================
 // Recursively trace a single photon
 
-void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction, 
+bool PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction, 
 				const float wavelength, int iter, Vec4f viz_color, Material* current_material, float current_n_val, bool single_photon) {
 
 	//std::cout << "Iter for this photon: " << iter << std::endl;
@@ -208,7 +209,7 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			printEscapingFacePhoton();
 			printOutputFile();
 		}
-		return;
+		return true;
 	}
 
 	Ray ray = Ray(position, direction);
@@ -419,8 +420,12 @@ void PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			printEscapingFacePhoton();
 			printOutputFile();
 		}
-	}
 
+		if(iter == 0){
+			return false;
+		}
+	}
+	return true;
 		
 }
 
@@ -542,7 +547,8 @@ void PhotonMapping::TracePhotonsWorker(
 			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 			float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
-			TracePhoton(
+
+			if(!TracePhoton(
 				start,
 				direction,
 				wavelength,
@@ -550,8 +556,11 @@ void PhotonMapping::TracePhotonsWorker(
 				photon_color, 
 				NULL, 
 				REFRACTIVE_INDEX_OF_AIR, 
-				false
-			);
+				false)){
+
+				num++;
+			
+			}
 		}
 	}
 }
