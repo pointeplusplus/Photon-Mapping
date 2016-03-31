@@ -63,10 +63,51 @@ public:
 		num_between_90_and_135 = 0;
 		num_greater_than_135 = 0;
 		total_leaving = 0;
+		num_leaving = 0;
+
+		for(int d = 0; d < 180; d++){
+			degree_totals.push_back(0);
+		}
+		for(int d = 0; d < 180; d++){
+			degree_percentages.push_back(0);
+		}
 	}
 	
 	void AddFace(std::string material, Vector normal, double area, unsigned int internal_bounces, unsigned int reflected_rays, unsigned int rays_entering, unsigned int rays_leaving){
 		faceInfo.push_back(Face(material, normal, area, internal_bounces, reflected_rays, rays_entering, rays_leaving));
+	}
+
+	void IncrementNumLeaving(){ num_leaving++; }
+
+	void IncrementDegree(int location){
+		if(location < 0 || location > 179){
+			std::cout << "ERROR: trying to increment bad location" << std::endl;
+			return;
+		}
+		degree_totals[location]++;
+	}
+
+	int GedDegreeInfo(int location){
+		if(location < 0 || location > 179){
+			std::cout << "ERROR: trying to get information on bad location" << std::endl;
+			return 0;
+		}
+		return degree_totals[location];
+	}
+
+	double GedDegreePercentage(int location){
+		if(location < 0 || location > 179){
+			std::cout << "ERROR: trying to get information on bad location" << std::endl;
+			return 0;
+		}
+		return degree_percentages[location];
+	}
+
+	void CalculatePercentages(){
+		for(unsigned int d = 0; d < degree_totals.size(); d++){
+			degree_percentages[d] = double(degree_totals[d])/double(num_leaving);
+			//std::cout << "percentage: " << degree_percentages[d] << " degree num: " << degree_totals[d] << std::endl;
+		}
 	}
 	
 	const Face& getFace(unsigned int a){
@@ -88,6 +129,11 @@ public:
 	unsigned int num_greater_than_135;
 	unsigned int total_leaving;
 
+	//std::vector<double> angles_leaving;
+	unsigned int num_leaving; //same function as total leaving, but for degree totals
+	std::vector<int> degree_totals;
+	std::vector<double> degree_percentages;
+
 
 private:
 	std::vector<Face> faceInfo;
@@ -99,8 +145,13 @@ double AngleFromUP(const Vector& vec){
 
 		//std::cout << "angle " << acos(vec.x/len) << std::endl;
 
-		return acos(vec.x/len); 
+		return acos(vec.y/len); 
 	}
+
+double AngleFromUPDegrees(const Vector& vec){
+
+	return AngleFromUP(vec)*180/PI;
+}
 
 Vector ParseNormal(std::string normal){
 	
@@ -135,54 +186,78 @@ void CollectModelInfo(char* filename, ModelInfo& model){
 	bool data_time = false;
 	//the first thing read in is the number of the face
 	while (file >> token){
+		//std::cout << token << ": ";
 		//keep going until you hit the first face line
 		if(token != "0:" && data_time == false) {
 			continue;
 		}
 
-		data_time = true;
+		//skip the line with the totals
+		if(token[token.length()-1] != ':'){
+			continue;
+		}
 
-		file >> material;
+		if(token != "leaving_directions:"){
+			//Gathering per face photon leaving data
+			data_time = true;
 
-		file >> token;
-		normal = ParseNormal(token);
+			file >> material;
+
+			file >> token;
+			normal = ParseNormal(token);
+			
+			file >> token; 
+			area = std::stod(token.c_str());
+			
+			file >> token;
+			internal_bounces = atoi(token.c_str());
+
+			file >> token;
+			reflected_rays = atoi(token.c_str());
+
+			file >> token;
+			rays_entering = atoi(token.c_str());
+
+			file >> token;
+			rays_leaving = atoi(token.c_str());
+
+			model.AddFace(material, normal, area, internal_bounces, reflected_rays, rays_entering, rays_leaving);
+		}
 		
-		file >> token;
-		area = std::stod(token.c_str());
-		
-		file >> token;
-		internal_bounces = atoi(token.c_str());
 
-		file >> token;
-		reflected_rays = atoi(token.c_str());
-
-		file >> token;
-		rays_entering = atoi(token.c_str());
-
-		file >> token;
-		rays_leaving = atoi(token.c_str());
-
-		model.AddFace(material, normal, area, internal_bounces, reflected_rays, rays_entering, rays_leaving);
+		//Getting all leaving angles
+		if(token == "leaving_directions:"){
+			double angle_from_top = 0;
+			while(file >> token){
+				normal = ParseNormal(token);
+				angle_from_top = AngleFromUPDegrees(normal);
+				//std::cout << angle_from_top << std::endl;
+				//increment all of the numbers less than the angle for cumulative sum
+				int degree = 180;
+				int location = 179;
+				model.IncrementNumLeaving();
+				for(; angle_from_top < degree; degree--, location--){
+					model.IncrementDegree(location);
+				}
+			}
+			model.CalculatePercentages();
+		}
 	}
-
-
 
 }
 
-int main(int argc, char* argv[]){
+void PrintPerDegreeData(std::vector<ModelInfo>& modelInfo){
+	for(int i = 0; i < 180; i++){
+		std::cout << i +1 << " ";
 
-	if(argc < 2){
-		std::cout << "Please enter file names" << std::endl;
+		for(unsigned int m = 0; m < modelInfo.size(); m++){
+			std::cout << modelInfo[m].GedDegreePercentage(i)  << " ";
+		}
+		std::cout << std::endl; 
 	}
+}
 
-	std::vector<ModelInfo> modelInfo;
-
-	for(int f = 1; f < argc; f++){
-		ModelInfo model;
-		CollectModelInfo(argv[f], model);
-		modelInfo.push_back(model);
-	}
-
+void Print4AngleData(std::vector<ModelInfo>& modelInfo){
 	for(unsigned int m = 0; m < modelInfo.size(); m++){
 		std::cout << "Model: " << m << std::endl;
 		for(int f = 0; f < modelInfo[m].numFaces()-1; f ++){
@@ -213,7 +288,48 @@ int main(int argc, char* argv[]){
 		std::cout << modelInfo[m].num_less_than_45/(double)modelInfo[m].total_leaving << " " << modelInfo[m].num_between_45_and_90/(double)modelInfo[m].total_leaving << " "
 					<< modelInfo[m].num_between_90_and_135/(double)modelInfo[m].total_leaving << " " << modelInfo[m].num_greater_than_135/(double)modelInfo[m].total_leaving << std::endl;
 	}
+}
+
+int main(int argc, char* argv[]){
+
+	if(argc < 2){
+		std::cout << "Please enter file names" << std::endl;
+	}
+
+	std::vector<ModelInfo> modelInfo;
+
+	int f = 1;
+
+	//determine which information to print
+	bool print_per_degree_data = false;
+	bool print_4_angle_data = false;
+
+	while (argv[f][0] == '-'){
+		std::string arg = argv[f];
+		if (arg == "-degree_data"){
+			print_per_degree_data = true;
+		}
+		if (arg == "-face_data"){
+			print_4_angle_data = true;
+		}		
+		f++;
+	}
+
+	//Get model info for each file
+	for(; f < argc; f++){
+		ModelInfo model;
+		CollectModelInfo(argv[f], model);
+		modelInfo.push_back(model);
+	}
+
+	if(print_per_degree_data){
+		PrintPerDegreeData(modelInfo);
+	}
+
+	if(print_4_angle_data){
+		Print4AngleData(modelInfo);
+	}
+
 
 	return 0;
-
 }
