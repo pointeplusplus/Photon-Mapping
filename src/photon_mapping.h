@@ -84,7 +84,7 @@ class PhotonMapping {
 	bool CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches) const;
 
 	// trace a single photon
-	void TracePhoton(const Vec3f &position, const Vec3f &direction, const float wavelength, int iter, Vec4f viz_color, Material* current_material, float current_n_val, bool single_photon);
+	bool TracePhoton(const Vec3f &position, const Vec3f &direction, const float wavelength, int iter, Vec4f viz_color, Material* current_material, float current_n_val, bool single_photon);
 	
 	void makeKDTree();
 	// Print the kdtree

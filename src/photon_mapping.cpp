@@ -24,7 +24,7 @@
 
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
-#define DIRECTED_LIGHT true
+#define DIRECTED_LIGHT false
 #define DRAW_PHOTON_PATHS false
 #define DRAW_FIRST_BOUNCE false
 #define DRAW_COLORED_PATHS false
@@ -526,39 +526,75 @@ void PhotonMapping::TracePhotonsWorker(
 		//replace energy with photon color 
 		Vec3f normal = lights[i]->computeNormal();
 		for (int j = 0; j < num; j++) {
-			Vec3f start = lights[i]->RandomPoint();
-			// the initial direction for this photon (for diffuse light sources)
-			Vec3f direction = RandomDiffuseDirection(normal);
-			if(DIRECTED_LIGHT){
-				
-				//slightly down (for rectagular prism)
-				//direction = Vec3f(1,-0.25,0);
 
-				//slightly up (for pyramid prism)
-				//direction = Vec3f(1,0.25,0);
-
-				//directed at diamond from light
-				//direction = Vec3f(2.0, -8.0, 2.0);
-
-
-				//straight down 
-				direction = Vec3f(0.0, -1.0, 0.0);
+			if (j%50000 == 0){
+				std::cout << "Thread: " << std::this_thread::get_id() << "is " << (double)j/(double)num *100 << "% done" << std:: endl;
 			}
-			//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
-			Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
-			float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
 
-			if(!TracePhoton(
-				start,
-				direction,
-				wavelength,
-				0, 
-				photon_color, 
-				NULL, 
-				REFRACTIVE_INDEX_OF_AIR, 
-				false)){
+			bool success = false;
 
-				num++;
+			while(!success){
+
+				Vec3f start = lights[i]->RandomPoint();
+				// the initial direction for this photon (for diffuse light sources)
+				Vec3f direction = RandomDiffuseDirection(normal);
+				if(DIRECTED_LIGHT){
+					
+					//slightly down (for rectagular prism)
+					//direction = Vec3f(1,-0.25,0);
+
+					//slightly up (for pyramid prism)
+					//direction = Vec3f(1,0.25,0);
+
+					//directed at diamond from light
+					//direction = Vec3f(2.0, -8.0, 2.0);
+
+					//straight up
+					//direction = Vec3f(0.0, 1.0, 0.0);
+
+					//left
+					//direction = Vec3f(-1.0, 0.0, 0.0);
+
+					// 10 degree rotation
+					//direction = Vec3f(-0.17365, -0.984807, 0.0);
+
+					// 15 degree rotation 
+					//direction = Vec3f(-0.25882, -0.965926, 0.0);
+
+					// 19.47 degree rotation 
+					direction = Vec3f(-0.581396, -0.813621, 0.0);
+
+					// 25 degree rotation (was this 20 or 25? -- I think it was 20)
+					//direction = Vec3f(-0.342021, -0.939692, 0.0);
+
+					// 30 degree rotation
+					//direction = Vec3f(-0.499998, -0.866027, 0.0);
+
+					// 60 degree rotation
+					//direction = Vec3f(-0.866027, -0.499998, 0.0);
+
+					// 120 degree rotation
+					//direction = Vec3f(-0.866027, 0.499998, 0.0);
+
+					// 150 degree rotation
+					//direction = Vec3f(-0.499998, 0.866027, 0.0);
+
+					//straight down 
+					//direction = Vec3f(0.0, -1.0, 0.0);
+				}
+				//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
+				Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
+				float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
+
+				success = TracePhoton(
+					start,
+					direction,
+					wavelength,
+					0, 
+					photon_color, 
+					NULL, 
+					REFRACTIVE_INDEX_OF_AIR, 
+					false);
 			
 			}
 		}
