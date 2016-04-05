@@ -41,6 +41,8 @@ public:
 		light_absorbed = absorbed;
 		name = mat_name;
 	}
+
+	Material() { }
 	
 	~Material();
 
@@ -69,7 +71,7 @@ public:
 	
 protected:
 
-	Material() { exit(0); }
+
 	Material(const Material&) { exit(0); }
 	const Material& operator=(const Material&) { exit(0); }
 

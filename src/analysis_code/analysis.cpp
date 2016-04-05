@@ -227,6 +227,7 @@ void CollectModelInfo(char* filename, ModelInfo& model){
 
 		//Getting all leaving angles
 		if(token == "leaving_directions:"){
+			return;
 			double angle_from_top = 0;
 			while(file >> token){
 				normal = ParseNormal(token);
@@ -258,13 +259,15 @@ void PrintPerDegreeData(std::vector<ModelInfo>& modelInfo){
 }
 
 void Print4AngleData(std::vector<ModelInfo>& modelInfo){
+
 	for(unsigned int m = 0; m < modelInfo.size(); m++){
 		std::cout << "Model: " << m << std::endl;
+		std::cout << "Model size = " << modelInfo[m].numFaces() << std::endl;
 		for(int f = 0; f < modelInfo[m].numFaces()-1; f ++){
 			const Face face = modelInfo[m].getFace(f);
-		//	std::cout << "    " << f << " " << face.material << " " << face.normal.x << " " << face.normal.y << " " 
-		//						<< face.normal.z << " " << face.area << " " << face.internal_bounces << " " << face.reflected_rays 
-		//						<< " " << face.rays_entering << " " << face.rays_leaving << std::endl;
+			std::cout << "    " << f << " " << face.material << " " << face.normal.x << " " << face.normal.y << " " 
+								<< face.normal.z << " " << face.area << " " << face.internal_bounces << " " << face.reflected_rays 
+								<< " " << face.rays_entering << " " << face.rays_leaving << std::endl;
 		}
 
 		for(int f = 0; f < modelInfo[m].numFaces()-1; f ++){
@@ -320,14 +323,18 @@ int main(int argc, char* argv[]){
 		ModelInfo model;
 		CollectModelInfo(argv[f], model);
 		modelInfo.push_back(model);
+		std::cout << "Model info collected from file" << std::endl;
 	}
+		std::cout << "number of models: " << modelInfo.size() << std::endl;
 
 	if(print_per_degree_data){
 		PrintPerDegreeData(modelInfo);
+		std::cout << "Per degree data printed" << std::endl;
 	}
 
 	if(print_4_angle_data){
 		Print4AngleData(modelInfo);
+		std::cout << "Face data printed" << std::endl;
 	}
 
 

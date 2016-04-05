@@ -582,6 +582,52 @@ void PhotonMapping::TracePhotonsWorker(
 					//straight down 
 					//direction = Vec3f(0.0, -1.0, 0.0);
 				}
+				else{
+
+					// 0 degree rotation
+					Vec3f a_vec = Vec3f(-1.0, 1.5, -1.0);
+					Vec3f b_vec = Vec3f(1.0, 1.5, -1.0);
+					Vec3f c_vec = Vec3f(1.0, 1.5, 1.0);
+					Vec3f d_vec = Vec3f(-1.0, 1.5, 1.0);
+
+					Vertex a_vert (10000, a_vec);
+					Vertex b_vert (10001, b_vec);
+					Vertex c_vert (10002, c_vec);
+					Vertex d_vert (10003, d_vec);
+
+					Vertex* a = &a_vert;
+					Vertex* b = &b_vert;
+					Vertex* c = &c_vert;
+					Vertex* d = &d_vert;
+
+					bool * backfacing_hit;
+					bool backfacing = false;
+					backfacing_hit = &backfacing;
+					Hit h;
+					Ray r(start,direction);
+
+					Material m;
+
+					Face floaty_face(&m);
+
+					Edge e1(a,b,&floaty_face);
+					Edge e2(b,c,&floaty_face);
+					Edge e3(c,d,&floaty_face);
+					Edge e4(d,a,&floaty_face);
+
+					e1.setNext(&e2);
+					e2.setNext(&e3);
+					e3.setNext(&e4);
+					e4.setNext(&e1);
+
+					floaty_face.setEdge(&e1);
+
+
+					if(!(floaty_face.intersect(r,h,true, backfacing_hit))){
+						continue;
+					}
+
+				}
 				//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 				Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 				float wavelength = (GLOBAL_mtrand.rand() * 400) + 380; //random number between 380 and 780 (visible light)
