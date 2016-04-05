@@ -6,6 +6,7 @@
 #include "vertex.h"
 #include "hit.h"
 #include <vector> 
+#include <mutex>
 class Material;
 class Hit;
 
@@ -70,23 +71,32 @@ public:
 		edge = e;
 	}
 	void incrementNumRaysLeaving(){ 
+		lock1.lock();
 		num_rays_leaving_face++;
+		lock1.unlock();
 	}
 
 	void incrementNumRaysEntering(){ 
+		lock2.lock();
 		num_rays_entering_face++;
+		lock2.unlock();
 	}
 
 	void incrementNumInteriorBounces(){ 
+		lock3.lock();
 		num_interior_bounces++;
+		lock3.unlock();
 	}
 
 	void incrementNumRaysReflected(){
+		lock4.lock();
 		num_rays_reflected++;
+		lock4.unlock();
 	}
 
 	void addLightLeavingDirection(Vec3f leaving_direction){
-		light_leaving_directions.push_back(leaving_direction);
+		// If this is to be uncommented, need to use a mutex.		
+		//light_leaving_directions.push_back(leaving_direction);
 	}
 
 	//Debug Functions
@@ -133,6 +143,7 @@ protected:
 	int num_rays_reflected;
 	std::vector<Vec3f> light_leaving_directions;
 	Vec3f* cached_normal; // cache normal
+	std::mutex normal_lock, lock1, lock2, lock3, lock4;
 };
 
 // ===========================================================

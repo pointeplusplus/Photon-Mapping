@@ -199,10 +199,12 @@ void Face::computeCachedNormal()
 }
 
 Vec3f Face::computeNormal() {
+	normal_lock.lock();
 	if(cached_normal == NULL)
 	{
-		computeCachedNormal();	
+		computeCachedNormal();
 	}
+	normal_lock.unlock();
 	return *cached_normal;
 }
 
