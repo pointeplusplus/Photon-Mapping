@@ -25,6 +25,7 @@ public:
 		num_rays_entering_face = 0;	 
 		num_interior_bounces = 0;
 		num_rays_reflected = 0;
+		cached_normal = NULL;
 	}
 
 	// =========
@@ -54,7 +55,7 @@ public:
 	Vec3f RandomPoint() const;
 	//Rebecca defined
 	Vec3f RandomStratifiedPoint(int x_iter, int y_iter, int num_samples) const;
-	Vec3f computeNormal() const;
+	Vec3f computeNormal();
 	int getNumRaysLeavingFace() const { return num_rays_leaving_face; }
 	int getNumRaysEnteringFace() const {return num_rays_entering_face; }
 	int getNumInteriorBounces() const {return num_interior_bounces; }
@@ -97,7 +98,7 @@ public:
  
 	// ==========
 	// RAYTRACING
-	bool intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) const;
+	bool intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit);
 
 	// =========
 	// RADIOSITY
@@ -107,8 +108,10 @@ public:
 protected:
 
 	// helper functions
-	bool triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex *c, bool intersect_backfacing, bool* backfacing_hit) const;
-	bool plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) const;
+	bool triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex *c, bool intersect_backfacing, bool* backfacing_hit);
+	bool plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit);
+
+	void computeCachedNormal();
 
 	// don't use this constructor
 	Face& operator= (const Face&) { assert(0); exit(0); }
@@ -129,6 +132,7 @@ protected:
 	int num_interior_bounces;
 	int num_rays_reflected;
 	std::vector<Vec3f> light_leaving_directions;
+	Vec3f* cached_normal; // cache normal
 };
 
 // ===========================================================

@@ -59,7 +59,7 @@ Vec3f Face::RandomStratifiedPoint(int x_iter, int y_iter, int num_samples) const
 // =========================================================================
 // the intersection routines
 
-bool Face::intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) const {
+bool Face::intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) {
 	// intersect with each of the subtriangles
 	Vertex *a = (*this)[0];
 	Vertex *b = (*this)[1];
@@ -68,7 +68,7 @@ bool Face::intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* back
 	return triangle_intersect(r,h,a,b,c,intersect_backfacing, backfacing_hit) || triangle_intersect(r,h,a,c,d,intersect_backfacing, backfacing_hit);
 }
 
-bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex *c, bool intersect_backfacing, bool* backfacing_hit) const {
+bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex *c, bool intersect_backfacing, bool* backfacing_hit) {
 
 	*backfacing_hit = false;
 	// compute the intersection with the plane of the triangle
@@ -116,7 +116,7 @@ bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex
 }
 
 
-bool Face::plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) const {
+bool Face::plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing, bool* backfacing_hit) {
 
 	// insert the explicit equation for the ray into the implicit equation of the plane
 
@@ -177,7 +177,8 @@ bool isLinear(const Vec3f &p1, const Vec3f &p2, const Vec3f &p3){
 	return true;
 }
 
-Vec3f Face::computeNormal() const {
+void Face::computeCachedNormal()
+{
 	// note: this face might be non-planar, so average the two triangle normals
 	Vec3f a = (*this)[0]->get();
 	Vec3f b = (*this)[1]->get();
@@ -186,12 +187,23 @@ Vec3f Face::computeNormal() const {
 
 	//Checks to make sure we don't have three points that we are using here to check the normal be linear -- that could cause errors!! 
 	if(isLinear(a,b,c)){
-		return ComputeNormal(a,c,d);
+		cached_normal = new Vec3f(ComputeNormal(a,c,d));
+		return;
 	}
 	if(isLinear(a,c,d)){
-		return ComputeNormal(a,b,c);
+		cached_normal = new Vec3f(ComputeNormal(a,b,c));
+		return;
 	}
-	return 0.5 * (ComputeNormal(a,b,c) + ComputeNormal(a,c,d));
+	cached_normal = new Vec3f(0.5 * (ComputeNormal(a,b,c) + ComputeNormal(a,c,d)));
+	return;
+}
+
+Vec3f Face::computeNormal() {
+	if(cached_normal == NULL)
+	{
+		computeCachedNormal();	
+	}
+	return *cached_normal;
 }
 
 bool Face::isConvex() const {
