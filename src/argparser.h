@@ -109,6 +109,12 @@ public:
 			else if(!strcmp(argv[i],"-balanced_tree")){
 				balanced_tree = true;
 			}
+			else if(!strcmp(argv[i],"-rotation")){
+				i++; assert (i < argc); 
+				rotation = atoi(argv[i]);
+				assert (rotation >= 0);
+				std::cout << "Rotation: " << rotation << "\n";
+			}
 			
 			else {
 				printf ("whoops error with command line argument %d: '%s'\n",i,argv[i]);
@@ -144,6 +150,7 @@ public:
 		std::cerr << "		 -num_raytrace_threads <num_raytrace_threads>\n";
 		std::cerr << "		 -num_shoot_threads <num_raytrace_threads>\n";
 		std::cerr << "		 -balanced_tree\n";
+		std::cerr << "		 -rotation <0, 30, 60, 90, 120, 150 or 180>\n";
 		exit(1);
 	} 
 	
@@ -171,6 +178,7 @@ public:
 		intersect_backfacing = true;
 		stratified_shadows = false; //Rebecca addded
 		stratified_antialiasing = false; //Rebecca added
+		rotation = 0;
 
 		// PHOTON MAPPING PARAMETERS
 		render_photons = false;
@@ -212,6 +220,7 @@ public:
 	bool intersect_backfacing;
 	bool stratified_shadows; //Rebecca added
 	bool stratified_antialiasing; //Rebecca added 
+	int rotation;
 
 	// PHOTON MAPPING PARAMETERS
 	unsigned int num_photons_to_shoot;
