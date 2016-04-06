@@ -585,10 +585,10 @@ void PhotonMapping::TracePhotonsWorker(
 				else{
 
 					// 0 degree rotation
-					Vec3f a_vec = Vec3f(-1.0, 1.5, -1.0);
-					Vec3f b_vec = Vec3f(1.0, 1.5, -1.0);
-					Vec3f c_vec = Vec3f(1.0, 1.5, 1.0);
-					Vec3f d_vec = Vec3f(-1.0, 1.5, 1.0);
+					//Vec3f a_vec = Vec3f(-1.0, 1.5, -1.0);
+					//Vec3f b_vec = Vec3f(1.0, 1.5, -1.0);
+					//Vec3f c_vec = Vec3f(1.0, 1.5, 1.0);
+					//Vec3f d_vec = Vec3f(-1.0, 1.5, 1.0);
 
 					// 30 degree rotation
 					//Vec3f a_vec = Vec3f(-0.116025, 1.79904, -1.0);
@@ -614,6 +614,17 @@ void PhotonMapping::TracePhotonsWorker(
 					//Vec3f c_vec = Vec3f(0.799038, -1.61603, 1.0);
 					//Vec3f d_vec = Vec3f(1.79904, 0.116025, 1.0);
 
+					// 150 degree rotation
+					//Vec3f a_vec = Vec3f(1.61603, -0.799038, -1.0);
+					//Vec3f b_vec = Vec3f(-0.116025, -1.79904, -1.0);
+					//Vec3f c_vec = Vec3f(-0.116025, -1.79904, 1.0);
+					//Vec3f d_vec = Vec3f(1.61603, -0.799038, 1.0);
+
+					// 180 degree rotation
+					Vec3f a_vec = Vec3f(1.0, -1.5, -1.0);
+					Vec3f b_vec = Vec3f(-1.0, -1.5, -1.0);
+					Vec3f c_vec = Vec3f(-1.0, -1.5, 1.0);
+					Vec3f d_vec = Vec3f(1.0, -1.5, 1.0);
 
 					Vertex a_vert (10000, a_vec);
 					Vertex b_vert (10001, b_vec);
