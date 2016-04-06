@@ -190,12 +190,14 @@ bool PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	colors.push_back(Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA)); // orange
 
 	//Add this photon to thee kd tree
-	Photon* this_iteration_photon = new Photon(position, direction, wavelength, iter);
+	//Photon p(position, direction, wavelength, iter);
+	//Photon* this_iteration_photon = &p;
 	
 	// Push back onto photon vector for KDTree creating later
-	photon_lock.lock();
-	photons.push_back(*this_iteration_photon);
-	photon_lock.unlock();
+	// -- Commented out for runs where we don't need visualization --	
+	//photon_lock.lock();
+	//photons.push_back(*this_iteration_photon);
+	//photon_lock.unlock();
 
 
 
@@ -514,6 +516,8 @@ void PhotonMapping::TracePhotonsWorker(
 	int num_threads
 )
 {
+	
+
 	// shoot a constant number of photons per unit area of light source
 	// (alternatively, this could be based on the total energy of each light)
 	for (unsigned int i = 0; i < lights.size(); i++) {	
@@ -583,12 +587,13 @@ void PhotonMapping::TracePhotonsWorker(
 					//direction = Vec3f(0.0, -1.0, 0.0);
 				}
 				else{
+					// Floaty face filter
 
 					// 0 degree rotation
-					//Vec3f a_vec = Vec3f(-1.0, 1.5, -1.0);
-					//Vec3f b_vec = Vec3f(1.0, 1.5, -1.0);
-					//Vec3f c_vec = Vec3f(1.0, 1.5, 1.0);
-					//Vec3f d_vec = Vec3f(-1.0, 1.5, 1.0);
+					Vec3f a_vec = Vec3f(-1.0, 1.5, -1.0);
+					Vec3f b_vec = Vec3f(1.0, 1.5, -1.0);
+					Vec3f c_vec = Vec3f(1.0, 1.5, 1.0);
+					Vec3f d_vec = Vec3f(-1.0, 1.5, 1.0);
 
 					// 30 degree rotation
 					//Vec3f a_vec = Vec3f(-0.116025, 1.79904, -1.0);
@@ -621,10 +626,10 @@ void PhotonMapping::TracePhotonsWorker(
 					//Vec3f d_vec = Vec3f(1.61603, -0.799038, 1.0);
 
 					// 180 degree rotation
-					Vec3f a_vec = Vec3f(1.0, -1.5, -1.0);
-					Vec3f b_vec = Vec3f(-1.0, -1.5, -1.0);
-					Vec3f c_vec = Vec3f(-1.0, -1.5, 1.0);
-					Vec3f d_vec = Vec3f(1.0, -1.5, 1.0);
+					//Vec3f a_vec = Vec3f(1.0, -1.5, -1.0);
+					//Vec3f b_vec = Vec3f(-1.0, -1.5, -1.0);
+					//Vec3f c_vec = Vec3f(-1.0, -1.5, 1.0);
+					//Vec3f d_vec = Vec3f(1.0, -1.5, 1.0);
 
 					Vertex a_vert (10000, a_vec);
 					Vertex b_vert (10001, b_vec);
@@ -635,12 +640,6 @@ void PhotonMapping::TracePhotonsWorker(
 					Vertex* b = &b_vert;
 					Vertex* c = &c_vert;
 					Vertex* d = &d_vert;
-
-					bool * backfacing_hit;
-					bool backfacing = false;
-					backfacing_hit = &backfacing;
-					Hit h;
-					Ray r(start,direction);
 
 					Material m;
 
@@ -659,10 +658,14 @@ void PhotonMapping::TracePhotonsWorker(
 					floaty_face.setEdge(&e1);
 
 
+					Ray r(start,direction);
+					bool * backfacing_hit;
+					bool backfacing = false;
+					backfacing_hit = &backfacing;
+					Hit h;
 					if(!(floaty_face.intersect(r,h,true, backfacing_hit))){
 						continue;
 					}
-
 				}
 				//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
 				Vec4f photon_color = Vec4f(1.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA);

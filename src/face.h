@@ -29,6 +29,11 @@ public:
 		cached_normal = NULL;
 	}
 
+	~Face() {
+		delete cached_normal;
+		cached_normal = NULL;
+	}
+
 	// =========
 	// ACCESSORS
 	Vertex* operator[](int i) const { 
