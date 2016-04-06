@@ -189,16 +189,17 @@ bool PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	colors.push_back(Vec4f(0.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA)); // cyan
 	colors.push_back(Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA)); // orange
 
-	//Add this photon to thee kd tree
-	//Photon p(position, direction, wavelength, iter);
-	//Photon* this_iteration_photon = &p;
-	
-	// Push back onto photon vector for KDTree creating later
-	// -- Commented out for runs where we don't need visualization --	
-	//photon_lock.lock();
-	//photons.push_back(*this_iteration_photon);
-	//photon_lock.unlock();
-
+	if(DRAW_PHOTON_PATHS)
+	{
+		// Add this photon to thee kd tree
+		Photon* this_iteration_photon = new Photon(position, direction, wavelength, iter);
+		
+		// Push back onto photon vector for KDTree creating later
+		// -- Commented out for runs where we don't need visualization --	
+		photon_lock.lock();
+		photons.push_back(*this_iteration_photon);
+		photon_lock.unlock();
+	}
 
 
 	//If we can bounce no more, return
