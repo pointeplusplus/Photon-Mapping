@@ -25,6 +25,8 @@
 #define PHOTON_VISUALIZATION_ALPHA 0.7
 //#define DRAW_VISUALIZATION false
 #define DIRECTED_LIGHT false
+#define FLOATY_FACE true
+#define COLLECT_PHOTONS true    // set to false to not use any memory when running
 #define DRAW_PHOTON_PATHS false
 #define DRAW_FIRST_BOUNCE false
 #define DRAW_COLORED_PATHS false
@@ -189,15 +191,15 @@ bool PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 	colors.push_back(Vec4f(0.0, 1.0, 1.0, PHOTON_VISUALIZATION_ALPHA)); // cyan
 	colors.push_back(Vec4f(1.0, 0.5, 0.0, PHOTON_VISUALIZATION_ALPHA)); // orange
 
-	if(DRAW_PHOTON_PATHS)
+	if(COLLECT_PHOTONS)
 	{
 		// Add this photon to thee kd tree
-		Photon* this_iteration_photon = new Photon(position, direction, wavelength, iter);
+		Photon this_iteration_photon(position, direction, wavelength, iter);
 		
 		// Push back onto photon vector for KDTree creating later
 		// -- Commented out for runs where we don't need visualization --	
 		photon_lock.lock();
-		photons.push_back(*this_iteration_photon);
+		photons.push_back(this_iteration_photon);
 		photon_lock.unlock();
 	}
 
@@ -254,16 +256,17 @@ bool PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 			}
 			//Normal of the hit (white and fully opaque) -- make the time constant just to draw a line
 			Ray hit_normal_ray = Ray(bounce_location, hit_normal);
-			ray_tree_lock.lock();
+			
 			if(DRAW_NORMALS){
+				ray_tree_lock.lock();
 				if(DRAW_COLORED_NORMALS){
 					RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, photon_color_with_alpha);
 				}
 				else{
 					RayTree::AddGeneralSegment(hit_normal_ray, 0, NORMAL_VISUALIZATION_LENGTH, Vec4f(1.0, 1.0, 1.0, 1.0));
 				}
+				ray_tree_lock.unlock();
 			}
-			ray_tree_lock.unlock();
 		}
 
 		//Change the color again to catch the refractive case (so it doesn't continue to be orange)
@@ -425,6 +428,11 @@ bool PhotonMapping::TracePhoton(const Vec3f &position, const Vec3f &direction,
 		}
 
 		if(iter == 0){
+			// Photon missed everything. Do not store it.
+			photon_lock.lock();
+			photons.pop_back();
+			photon_lock.unlock();
+
 			return false;
 		}
 	}
@@ -501,6 +509,8 @@ void PhotonMapping::TracePhotons() {
 		<< " seconds (" << (args->num_photons_to_shoot)/(start_time/1000000.0)
 		<< " photons/second) using " << num_threads << " threads\n";
 	
+	std::cout << "Number of photons: " << photons.size() << "\n";
+
 	// Construct the KDTree
 	makeKDTree();
 	
@@ -683,14 +693,16 @@ void PhotonMapping::TracePhotonsWorker(
 				}
 				else{
 					// Directed light
-
-					Ray r(start,direction);
-					bool * backfacing_hit;
-					bool backfacing = false;
-					backfacing_hit = &backfacing;
-					Hit h;
-					if(!(floaty_face.intersect(r,h,true, backfacing_hit))){
-						continue;
+					if(FLOATY_FACE)
+					{
+						Ray r(start,direction);
+						bool * backfacing_hit;
+						bool backfacing = false;
+						backfacing_hit = &backfacing;
+						Hit h;
+						if(!(floaty_face.intersect(r,h,true, backfacing_hit))){
+							continue;
+						}
 					}
 				}
 				//Vec4f photon_color = Vec4f(1.0, 0.0, 1.0, PHOTON_VISUALIZATION_ALPHA);
@@ -924,10 +936,12 @@ void PhotonMapping::makeKDTree()
 		kdtree = new KDTree(BoundingBox(min,max));
 		
 		// Add all the photons, 1 by 1.
-		for(unsigned int i = 0; i < photons.size(); ++i)
+		while(!photons.empty())
 		{
-			kdtree->AddPhoton(photons[i]);
+			kdtree->AddPhoton(photons.back());
+			photons.pop_back();
 		}
+
 		start_time = std::chrono::duration_cast<std::chrono::microseconds>(
 				std::chrono::system_clock::now().time_since_epoch()).count() 
 				- start_time;

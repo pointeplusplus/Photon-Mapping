@@ -100,8 +100,9 @@ public:
 	}
 
 	void addLightLeavingDirection(Vec3f leaving_direction){
-		// If this is to be uncommented, need to use a mutex.		
+		//lock5.lock();	
 		//light_leaving_directions.push_back(leaving_direction);
+		//lock5.unlock();
 	}
 
 	//Debug Functions
@@ -148,7 +149,7 @@ protected:
 	int num_rays_reflected;
 	std::vector<Vec3f> light_leaving_directions;
 	Vec3f* cached_normal; // cache normal
-	std::mutex normal_lock, lock1, lock2, lock3, lock4;
+	std::mutex normal_lock, lock1, lock2, lock3, lock4, lock5;
 };
 
 // ===========================================================

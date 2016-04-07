@@ -185,7 +185,7 @@ public:
 
 		// PHOTON MAPPING PARAMETERS
 		render_photons = false;
-		render_kdtree = true;
+		render_kdtree = false;
 		num_photons_to_shoot = 10000;
 		num_photons_to_collect = 100;
 		gather_indirect = false;
