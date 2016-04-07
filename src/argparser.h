@@ -115,6 +115,9 @@ public:
 				assert (rotation >= 0);
 				std::cout << "Rotation: " << rotation << "\n";
 			}
+			else if(!strcmp(argv[i],"-render_normals")){
+				color_by_normal = true;
+			}
 			
 			else {
 				printf ("whoops error with command line argument %d: '%s'\n",i,argv[i]);
@@ -190,6 +193,7 @@ public:
 		num_shoot_threads = 1;
 		num_raytrace_threads = 1;
 		balanced_tree = false;
+		color_by_normal = false;
 	}
 
 	// ==============
@@ -232,6 +236,7 @@ public:
 	int num_shoot_threads;
 	int num_raytrace_threads;
 	bool balanced_tree;
+	bool color_by_normal;
 };
 
 #endif

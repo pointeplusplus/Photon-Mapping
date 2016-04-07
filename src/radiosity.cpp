@@ -101,7 +101,40 @@ void CollectFacesWithVertex(Vertex *have, Face *f, std::vector<Face*> &faces) {
 Vec3f Radiosity::setupHelperForColor(Face *f, int i, int j) {
 	assert (mesh->getFace(i) == f);
 	assert (j >= 0 && j < 4);
-	if (args->render_mode == RENDER_MATERIALS) {
+	if(args->color_by_normal == true){
+		
+		Vec3f normal = f->computeNormal();
+		Vec3f up(0.0f, 1.0f, 0.0f);
+
+		Vec3f blue(0.1f, 0.1f, 1.0f);
+		Vec3f orange(0.8f, 0.2f, 0.0f);
+		Vec3f grey(0.25f, 0.25f, 0.25f);
+		Vec3f yellow(1.0f, 1.0f, 0.0f);
+
+		float angle = normal.AngleBetweenDegrees(up);
+
+		//std::cout << "Normal: " << normal.r() << " " << normal.g() << " " << normal.b() << std::endl;
+		//std::cout << "    angle: " << angle << std::endl;
+		if(angle < 45){
+			std::cout << "    color: blue" << std::endl;
+			return blue;
+		}
+		else if (angle <90){
+			std::cout << "    color: orange" << std::endl;
+			return orange;
+		}
+		else if (angle <135){
+			std::cout << "    color: grey" << std::endl;
+			return grey;
+		}
+		else{
+			std::cout << "    color: yellow" << std::endl;
+			return yellow;
+		}
+
+		
+	}
+	else if (args->render_mode == RENDER_MATERIALS) {
 		return f->getMaterial()->getDiffuseColor();
 	}
 	exit(0);

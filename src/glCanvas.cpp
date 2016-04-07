@@ -115,9 +115,11 @@ void GLCanvas::InitLight() {
 	// a directional light source
 
 	GLfloat position[4] = { 30,30,100, 1};
-	GLfloat diffuse[4] = { 0.75,0.75,0.75,1};
+//	GLfloat diffuse[4] = { 0.75,0.75,0.75,1};
+//	GLfloat specular[4] = { 0,0,0,1};
+	GLfloat diffuse[4] = { 0.0,0.0,0.0,1};
 	GLfloat specular[4] = { 0,0,0,1};
-	GLfloat ambient[4] = { 0.2, 0.2, 0.2, 1.0 };
+	GLfloat ambient[4] = { 0.8, 0.8, 0.8, 1.0 };
 
 	GLfloat zero[4] = {0,0,0,0};
 	glLightfv(GL_LIGHT1, GL_POSITION, position);
