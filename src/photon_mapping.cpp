@@ -517,7 +517,101 @@ void PhotonMapping::TracePhotonsWorker(
 	int num_threads
 )
 {
+	// Floaty face filter
+	Vec3f a_vec;
+	Vec3f b_vec;
+	Vec3f c_vec;
+	Vec3f d_vec;
 	
+	switch(args->rotation)
+	{
+		case 0:
+			// 0 degree rotation
+			a_vec = Vec3f(-1.0, 1.5, -1.0);
+			b_vec = Vec3f(1.0, 1.5, -1.0);
+			c_vec = Vec3f(1.0, 1.5, 1.0);
+			d_vec = Vec3f(-1.0, 1.5, 1.0);
+			break;
+
+		case 30:
+			// 30 degree rotation
+			a_vec = Vec3f(-0.116025, 1.79904, -1.0);
+			b_vec = Vec3f(1.61603, 0.799038, -1.0);
+			c_vec = Vec3f(1.61603, 0.799038, 1.0);
+			d_vec = Vec3f(-0.116025, 1.79904, 1.0);
+			break;
+
+		case 60:
+			// 60 degree rotation
+			a_vec = Vec3f(0.799038, 1.61603, -1.0);
+			b_vec = Vec3f(1.79904, -0.116025, -1.0);
+			c_vec = Vec3f(1.79904, -0.116025, 1.0);
+			d_vec = Vec3f(0.799038, 1.61603, 1.0);
+			break;
+
+		case 90:
+			// 90 degree rotation
+			a_vec = Vec3f(1.5, 1.0, -1.0);
+			b_vec = Vec3f(1.5, -1.0, -1.0);
+			c_vec = Vec3f(1.5, -1.0, 1.0);
+			d_vec = Vec3f(1.5, 1.0, 1.0);
+			break;
+
+		case 120:
+			// 120 degree rotation
+			a_vec = Vec3f(1.79904, 0.116025, -1.0);
+			b_vec = Vec3f(0.799038, -1.61603, -1.0);
+			c_vec = Vec3f(0.799038, -1.61603, 1.0);
+			d_vec = Vec3f(1.79904, 0.116025, 1.0);
+			break;
+
+		case 150:
+			// 150 degree rotation
+			a_vec = Vec3f(1.61603, -0.799038, -1.0);
+			b_vec = Vec3f(-0.116025, -1.79904, -1.0);
+			c_vec = Vec3f(-0.116025, -1.79904, 1.0);
+			d_vec = Vec3f(1.61603, -0.799038, 1.0);
+			break;
+
+		case 180:
+			// 180 degree rotation
+			a_vec = Vec3f(1.0, -1.5, -1.0);
+			b_vec = Vec3f(-1.0, -1.5, -1.0);
+			c_vec = Vec3f(-1.0, -1.5, 1.0);
+			d_vec = Vec3f(1.0, -1.5, 1.0);
+			break;
+
+		default:
+			std::cout << "Invalid rotation value " << args->rotation << "\n";
+			exit(1);
+	}
+	
+
+	Vertex a_vert (10000, a_vec);
+	Vertex b_vert (10001, b_vec);
+	Vertex c_vert (10002, c_vec);
+	Vertex d_vert (10003, d_vec);
+
+	Vertex* a = &a_vert;
+	Vertex* b = &b_vert;
+	Vertex* c = &c_vert;
+	Vertex* d = &d_vert;
+
+	Material m;
+
+	Face floaty_face(&m);
+
+	Edge e1(a,b,&floaty_face);
+	Edge e2(b,c,&floaty_face);
+	Edge e3(c,d,&floaty_face);
+	Edge e4(d,a,&floaty_face);
+
+	e1.setNext(&e2);
+	e2.setNext(&e3);
+	e3.setNext(&e4);
+	e4.setNext(&e1);
+
+	floaty_face.setEdge(&e1);
 
 	// shoot a constant number of photons per unit area of light source
 	// (alternatively, this could be based on the total energy of each light)
@@ -589,103 +683,6 @@ void PhotonMapping::TracePhotonsWorker(
 				}
 				else{
 					// Directed light
-
-					// Floaty face filter
-					Vec3f a_vec;
-					Vec3f b_vec;
-					Vec3f c_vec;
-					Vec3f d_vec;
-					
-					switch(args->rotation)
-					{
-						case 0:
-							// 0 degree rotation
-							a_vec = Vec3f(-1.0, 1.5, -1.0);
-							b_vec = Vec3f(1.0, 1.5, -1.0);
-							c_vec = Vec3f(1.0, 1.5, 1.0);
-							d_vec = Vec3f(-1.0, 1.5, 1.0);
-							break;
-
-						case 30:
-							// 30 degree rotation
-							a_vec = Vec3f(-0.116025, 1.79904, -1.0);
-							b_vec = Vec3f(1.61603, 0.799038, -1.0);
-							c_vec = Vec3f(1.61603, 0.799038, 1.0);
-							d_vec = Vec3f(-0.116025, 1.79904, 1.0);
-							break;
-
-						case 60:
-							// 60 degree rotation
-							a_vec = Vec3f(0.799038, 1.61603, -1.0);
-							b_vec = Vec3f(1.79904, -0.116025, -1.0);
-							c_vec = Vec3f(1.79904, -0.116025, 1.0);
-							d_vec = Vec3f(0.799038, 1.61603, 1.0);
-							break;
-
-						case 90:
-							// 90 degree rotation
-							a_vec = Vec3f(1.5, 1.0, -1.0);
-							b_vec = Vec3f(1.5, -1.0, -1.0);
-							c_vec = Vec3f(1.5, -1.0, 1.0);
-							d_vec = Vec3f(1.5, 1.0, 1.0);
-							break;
-
-						case 120:
-							// 120 degree rotation
-							a_vec = Vec3f(1.79904, 0.116025, -1.0);
-							b_vec = Vec3f(0.799038, -1.61603, -1.0);
-							c_vec = Vec3f(0.799038, -1.61603, 1.0);
-							d_vec = Vec3f(1.79904, 0.116025, 1.0);
-							break;
-
-						case 150:
-							// 150 degree rotation
-							a_vec = Vec3f(1.61603, -0.799038, -1.0);
-							b_vec = Vec3f(-0.116025, -1.79904, -1.0);
-							c_vec = Vec3f(-0.116025, -1.79904, 1.0);
-							d_vec = Vec3f(1.61603, -0.799038, 1.0);
-							break;
-
-						case 180:
-							// 180 degree rotation
-							a_vec = Vec3f(1.0, -1.5, -1.0);
-							b_vec = Vec3f(-1.0, -1.5, -1.0);
-							c_vec = Vec3f(-1.0, -1.5, 1.0);
-							d_vec = Vec3f(1.0, -1.5, 1.0);
-							break;
-
-						default:
-							std::cout << "Invalid rotation value " << args->rotation << "\n";
-							exit(1);
-					}
-					
-
-					Vertex a_vert (10000, a_vec);
-					Vertex b_vert (10001, b_vec);
-					Vertex c_vert (10002, c_vec);
-					Vertex d_vert (10003, d_vec);
-
-					Vertex* a = &a_vert;
-					Vertex* b = &b_vert;
-					Vertex* c = &c_vert;
-					Vertex* d = &d_vert;
-
-					Material m;
-
-					Face floaty_face(&m);
-
-					Edge e1(a,b,&floaty_face);
-					Edge e2(b,c,&floaty_face);
-					Edge e3(c,d,&floaty_face);
-					Edge e4(d,a,&floaty_face);
-
-					e1.setNext(&e2);
-					e2.setNext(&e3);
-					e3.setNext(&e4);
-					e4.setNext(&e1);
-
-					floaty_face.setEdge(&e1);
-
 
 					Ray r(start,direction);
 					bool * backfacing_hit;
